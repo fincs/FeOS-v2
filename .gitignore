@@ -1,0 +1,14 @@
+build/
+build.*/
+*.7z
+*.exe
+*.img
+*.elf
+*.dbg
+*.fxe
+*.a
+*.db
+*.ppg
+*.pnproj
+*.pnps
+*~
