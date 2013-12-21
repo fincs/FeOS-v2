@@ -2,7 +2,6 @@
 
 static isrEntry isrTable[MAX_IRQCTRL][MAX_ISR];
 static u32 isrFlags[MAX_IRQCTRL];
-static bool bIrqsWereEnabled;
 
 static void __irqSet(int ctrlId, u32 mask, isr_t isr)
 {
@@ -20,26 +19,14 @@ static void __irqSet(int ctrlId, u32 mask, isr_t isr)
 	isrs[i].isr = isr;
 }
 
-void irqSuspend(void)
-{
-	bIrqsWereEnabled = !(CpuGetCPSR() & BIT(7));
-	CpuIrqDisable();
-}
-
-void irqRestore(void)
-{
-	if (bIrqsWereEnabled)
-		CpuIrqEnable();
-}
-
 void irqSet(int ctrlId, u32 mask, isr_t isr)
 {
 	if (!mask || ctrlId >= MAX_IRQCTRL)
 		return;
 
-	irqSuspend();
+	bool cs = irqSuspend();
 	__irqSet(ctrlId, mask, isr);
-	irqRestore();
+	irqRestore(cs);
 }
 
 u32 irqFlags(int ctrlId)

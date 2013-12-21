@@ -27,8 +27,18 @@ u32 irqFlags(int ctrlId);
 
 #define irqClear(ctrlId, mask) irqSet((ctrlId), (mask), nullptr)
 
-void irqSuspend(void);
-void irqRestore(void);
+static inline bool irqSuspend(void)
+{
+	bool ret = !(CpuGetCPSR() & BIT(7));
+	CpuIrqDisable();
+	return ret;
+}
+
+static inline void irqRestore(bool state)
+{
+	if (state)
+		CpuIrqEnable();
+}
 
 void KeIrqEntry(u32* regs); // implemented by HAL
 
