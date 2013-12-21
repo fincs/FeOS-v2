@@ -1,11 +1,5 @@
 #include "common.h"
 
-// TODO: move to header!
-void kputs(const char*);
-void kputu(u32);
-void kputd(int);
-void kputx(u32);
-
 static void ThrTimerISR(u32* regs);
 static int thrTimerId;
 
@@ -57,15 +51,13 @@ static int ThrTestMain(const char* str)
 {
 	extern semaphore_t mySem;
 
-	kputs("<ThrTestMain> I was given ");
-	kputs(str);
-	kputs("\nWoohoo!\n");
+	kprintf("<ThrTestMain> I was given %s\nWoohoo!\n", str);
 
 	int i;
 	SemaphoreDown(&mySem);
 	for (i = 0; i < 64; i ++)
 	{
-		kputs("R");
+		kputc('R');
 		ThrWaitForIRQ(0, BIT(4));
 	}
 	SemaphoreUp(&mySem);
@@ -248,7 +240,7 @@ threadInfo* ThrScheduler(schedulerInfo* sched, bool isPreempt)
 			sched->readyCount[sched->which] --;
 			t = threadQueue_pop(q);
 #ifdef DEBUG
-			kputs("<ThrScheduler> Switching to "); kputx((u32)t); kputs(" prio="); kputd(i); kputs(" svcLr="); kputx(t->ctx.svcLr); kputs("\n");
+			kprintf("<ThrScheduler> Switching to %p prio=%d svcLr=%x\n", t, i, t->ctx.svcLr);
 #endif
 			return t;
 		}

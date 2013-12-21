@@ -1,67 +1,13 @@
 #include "common.h"
 
-#define REG_UART0DR (*(vu32*)0xA01f1000)
-
-static inline void kputc(char c)
-{
-	REG_UART0DR = c;
-}
-
-void kputs(const char* s)
-{
-	for (; *s; s++)
-		kputc(*s);
-}
-
-void kputx(u32 x)
-{
-	static const char conv[] = "0123456789ABCDEF";
-
-	int i;
-	for (i = 32-4; i >= 0; i -= 4)
-	{
-		int v = (x >> i) & 0xF;
-		kputc(conv[v]);
-	}
-}
-
-static void _kputu(u32 x)
-{
-	u32 q = x / 10;
-	u32 r = x % 10;
-	if (q) _kputu(q);
-	kputc('0' + r);
-}
-
-void kputu(u32 x)
-{
-	if (x == 0)
-	{
-		kputc('0');
-		return;
-	}
-
-	_kputu(x);
-}
-
-void kputd(int x)
-{
-	if (x < 0)
-	{
-		kputc('-');
-		x = -x;
-	}
-	_kputu(x);
-}
-
 void memtest()
 {
 	pageinfo_t* p1 = MemAllocPage(PAGEORDER_4K);
 	pageinfo_t* p2 = MemAllocPage(PAGEORDER_8K);
 	pageinfo_t* p3 = MemAllocPage(PAGEORDER_1M);
-	kputs("<memtest> page 1 @ 0x"); kputx((u32)page2vphys(p1)); kputs(" -- pageinfo at 0x"); kputx((u32)p1); kputc('\n');
-	kputs("<memtest> page 2 @ 0x"); kputx((u32)page2vphys(p2)); kputs(" -- pageinfo at 0x"); kputx((u32)p2); kputc('\n');
-	kputs("<memtest> page 3 @ 0x"); kputx((u32)page2vphys(p3)); kputs(" -- pageinfo at 0x"); kputx((u32)p3); kputc('\n');
+	kprintf("<memtest> page 1 @ %p -- pageinfo at %p\n", page2vphys(p1), p1);
+	kprintf("<memtest> page 2 @ %p -- pageinfo at %p\n", page2vphys(p2), p2);
+	kprintf("<memtest> page 3 @ %p -- pageinfo at %p\n", page2vphys(p3), p3);
 
 	MemFreePage(p1, PAGEORDER_4K);
 	MemFreePage(p2, PAGEORDER_8K);
@@ -72,9 +18,9 @@ void maptest()
 {
 	vu32* mem1 = (vu32*)MemMapPage((void*)0x02000000, PAGE_W);
 	vu32* mem2 = (vu32*)MemMapPage((void*)0xC0100000, PAGE_W | PAGE_X);
-	kputs("<maptest> page 1 @ 0x"); kputx((u32)mem1); kputc('\n');
+	kprintf("<maptest> page 1 @ %p\n", mem1);
 	*mem1 = 24;
-	kputs("<maptest> page 2 @ 0x"); kputx((u32)mem2); kputc('\n');
+	kprintf("<maptest> page 2 @ %p\n", mem2);
 	//*mem2 = 42;
 
 	mem2[0] = 0xE3A0002A; // mov r0, #42
@@ -88,7 +34,7 @@ void maptest()
 	myfp func = (myfp)mem2;
 
 	int ret = func();
-	kputs("<maptest> Got return value "); kputd(ret); kputs(" out of the dynamic function!\n");
+	kprintf("<maptest> Got return value %d out of the dynamic function!\n", ret);
 
 	MemUnmapPage((void*)mem1);
 	MemUnmapPage((void*)mem2);
@@ -98,8 +44,8 @@ void heaptest()
 {
 	void* mem1 = malloc(124);
 	void* mem2 = memalign(32, 35661);
-	kputs("<heaptest> mem1 @ 0x"); kputx((u32)mem1); kputc('\n');
-	kputs("<heaptest> mem2 @ 0x"); kputx((u32)mem2); kputc('\n');
+	kprintf("<heaptest> mem1 @ %p\n", mem1);
+	kprintf("<heaptest> mem2 @ %p\n", mem2);
 	free(mem1);
 	free(mem2);
 	malloc_trim(0);
@@ -111,8 +57,8 @@ void vspacetest()
 	HVSPACE sp1 = vspace_alloc(h, 1234);
 	HVSPACE sp2 = vspace_alloc(h, 76543);
 
-	kputs("<vspacetest> sp1 @ "); kputx(vspace_getAddr(sp1)); kputs(", page count: "); kputu(vspace_getPageCount(sp1)); kputc('\n');
-	kputs("<vspacetest> sp2 @ "); kputx(vspace_getAddr(sp2)); kputs(", page count: "); kputu(vspace_getPageCount(sp2)); kputc('\n');
+	kprintf("<vspacetest> sp1 @ %p, page count: %u\n", vspace_getAddr(sp1), vspace_getPageCount(sp1));
+	kprintf("<vspacetest> sp2 @ %p, page count: %u\n", vspace_getAddr(sp2), vspace_getPageCount(sp2));
 
 	// These are just for testing coalescing - it's not really necessary since we free everything after this
 	vspace_free(sp1);
@@ -128,19 +74,15 @@ void myTimerIsr(u32* regs)
 
 void WhateverExcpt(int type, u32 addr)
 {
-	kputs("\nEXCEPTION ");
-	kputd(type);
-	kputs(" AT ");
-	kputx(addr);
-	kputs("\n");
+	kprintf("\nEXCEPTION %d AT %p\n", type, addr);
 
 	u32 mySp, myLr;
 	CpuSaveModeRegs(CPSR_MODE_IRQ, &mySp, &myLr);
-	kputs("IRQ SP: "); kputx(mySp), kputs(" LR: "); kputx(myLr); kputc('\n');
+	kprintf("IRQ SP: %x LR: %x\n", mySp, myLr);
 	CpuSaveModeRegs(CPSR_MODE_SVC, &mySp, &myLr);
-	kputs("SVC SP: "); kputx(mySp), kputs(" LR: "); kputx(myLr); kputc('\n');
+	kprintf("SVC SP: %x LR: %x\n", mySp, myLr);
 	CpuSaveModeRegs(CPSR_MODE_USR, &mySp, &myLr);
-	kputs("USR SP: "); kputx(mySp), kputs(" LR: "); kputx(myLr); kputc('\n');
+	kprintf("USR SP: %x LR: %x\n", mySp, myLr);
 
 	for(;;);
 }
@@ -149,6 +91,7 @@ semaphore_t mySem;
 
 int kmain(u32 memSize)
 {
+	KioInit();
 	kputs("<kmain> started\n");
 	MemInit(memSize);
 	irqInit();

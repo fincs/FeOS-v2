@@ -1,11 +1,5 @@
 #include "common.h"
 
-// TODO: move to header!
-void kputs(const char*);
-void kputu(u32);
-void kputd(int);
-void kputx(u32);
-
 typedef struct tag_vspacetoken vspacetoken_t;
 
 struct tag_vspacetoken
@@ -48,7 +42,7 @@ void vspace_freeAll(HVSPACE h)
 HVSPACE vspace_alloc(HVSPACE h, u32 size)
 {
 	size = (size + 0xFFF) >> 12;
-	kputs("<vspace_alloc> Caller requested "); kputu(size); kputs(" pages\n");
+	kprintf("<vspace_alloc> Caller requested %u pages\n", size);
 
 	vspacetoken_t* t;
 	for (t = (vspacetoken_t*)h; t; t = t->next)

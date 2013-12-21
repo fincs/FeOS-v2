@@ -16,3 +16,10 @@ char* memset(char* ptr, int x, unsigned int len)
 		*ptr++ = x;
 	return ret;
 }
+
+int strlen(const char* buf)
+{
+	int i = 0;
+	for (; *buf++; i ++);
+	return i;
+}

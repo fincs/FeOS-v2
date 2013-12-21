@@ -18,9 +18,7 @@ static inline u32 toPageCount(u32 x)
 
 void* sbrk(int delta)
 {
-	extern void kputs(const char*);
-	extern void kputd(int);
-	kputs("<sbrk> delta="); kputd(delta); kputs("\n");
+	kprintf("<sbrk> delta=%d\n", delta);
 
 	if (!delta) return heapPtr;
 
@@ -41,7 +39,7 @@ void* sbrk(int delta)
 				void* page = MemMapPage(nextPage, PAGE_W);
 				if (!page)
 					return ((void*)-1); // Out of memory
-				//kputs("<sbrk> mapped "); kputx((u32)page); kputs("\n");
+				//kprintf("<sbrk> mapped %p\n", page);
 				nextPage = (char*)page + 0x1000;
 				heapPages ++;
 			}
@@ -65,7 +63,7 @@ void* sbrk(int delta)
 			nextPage = (char*)nextPage - 0x1000;
 			heapPages --;
 			MemUnmapPage(nextPage);
-			//kputs("<sbrk> unmapped "); kputx((u32)nextPage); kputs("\n");
+			//kprintf("<sbrk> unmapped %p\n", nextPage);
 		}
 	}
 

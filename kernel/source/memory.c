@@ -1,11 +1,5 @@
 #include "common.h"
 
-// TODO: move to header!
-void kputs(const char*);
-void kputu(u32);
-void kputd(int);
-void kputx(u32);
-
 // Max orders: 9 (so that order 8 = 1 MB)
 #define MAX_ORDERS 9
 
@@ -33,13 +27,7 @@ void MemInit(u32 memSize)
 	g_usableMem = __temp_freeMB;
 	g_physBase = __temp_physStart;
 
-	kputs("<MemInit> totalMem: ");
-	kputu(g_totalMem);
-	kputs(" bytes - usableMem: ");
-	kputu(g_usableMem);
-	kputs(" MB - physBase: 0x");
-	kputx(g_physBase);
-	kputs("\n");
+	kprintf("<MemInit> totalMem: %u bytes - usableMem: %u bytes - physBase: %p\n", g_totalMem, g_usableMem, g_physBase);
 
 	// Initialize buddy bitmaps
 	u8* pos = PHYSICAL_MEMORY + sizeof(pageinfo_t)*(g_usableMem<<8);
@@ -48,11 +36,7 @@ void MemInit(u32 memSize)
 	for (i = 0; i < MAX_ORDERS; i ++)
 	{
 #ifdef DEBUG
-		kputs("<MemInit> order #");
-		kputu(i);
-		kputs(": bitmap at 0x");
-		kputx((u32)pos);
-		kputs("\n");
+		kprintf("<MemInit> order #%u: bitmap at %p\n", i, pos);
 #endif
 		orderinfo[i].bitmap = pos;
 
@@ -69,11 +53,7 @@ void MemInit(u32 memSize)
 	pageinfo_t* cur = PAGEMAP + (i << 8);
 	pageinfo_t* prev = nullptr;
 
-	kputs("<MemInit> Available memory starts at 0x");
-	kputx(0x80000000 + (i<<20));
-	kputs(", and ");
-	kputu(g_usableMem-i);
-	kputs(" MB are usable\n");
+	kprintf("<MemInit> Available memory starts at %p, and %u MB are usable\n", 0x80000000 + (i<<20), g_usableMem-i);
 
 	for (; i < g_usableMem; i ++)
 	{
@@ -152,13 +132,7 @@ void MemFreePage(pageinfo_t* page, int order)
 	// Get the buddy
 	pageinfo_t* buddy = (pageinfo_t*)((u32)page ^ ((1<<order)*sizeof(pageinfo_t)));
 #ifdef DEBUG
-	kputs("<MemFreePage> {");
-	kputd(order);
-	kputs("} Coalescing 0x");
-	kputx((u32)page);
-	kputs(" and 0x");
-	kputx((u32)buddy);
-	kputs("\n");
+	kprintf("<MemFreePage> {%d} Coalescing %p and %p\n", order, page, buddy);
 #endif
 
 	// TODO: implement
@@ -178,9 +152,7 @@ void MemFreePage(pageinfo_t* page, int order)
 	page = page < buddy ? page : buddy;
 
 #ifdef DEBUG
-	kputs("<MemFreePage> Now recursing into 0x");
-	kputx((u32)page);
-	kputs("\n");
+	kprintf("<MemFreePage> Now recursing into %p\n", page);
 #endif
 
 	// Free the page
@@ -324,7 +296,7 @@ bool MemUnmapPage(void* vaddr)
 {
 	vaddr = _CleanMapAddr(vaddr);
 #ifdef DEBUG
-	kputs("<MemUnmapPage> 0x"); kputx((u32)vaddr); kputs(" to be freed\n");
+	kprintf("<MemUnmapPage> %p to be freed\n", vaddr);
 #endif
 	vu32* entry2 = nullptr;
 	vu32* entry = _GetCoarseTable(vaddr, true, &entry2);
