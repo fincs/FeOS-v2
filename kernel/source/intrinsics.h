@@ -124,6 +124,11 @@ static inline u32 CpuGetCPSR()
 	return ret;
 }
 
+static inline void CpuLoopDelay(u32 count)
+{
+	asm volatile("1: subs %[count], %[count], #1; bne 1b" :: [count] "r" (count) : "cc");
+}
+
 static inline void CpuRestoreModeRegs(int mode, u32 sp, u32 lr)
 {
 	u32 cpsr, spsr;
