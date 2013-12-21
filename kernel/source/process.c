@@ -15,12 +15,12 @@ static int asidAlloc()
 {
 	if (asidStackPos == 256)
 		return -1;
-	return asidStack[AtomicIncrement(&asidStackPos)];
+	return asidStack[AtomicPostIncrement(&asidStackPos)];
 }
 
 static void asidFree(int x)
 {
-	asidStack[AtomicPreDecrement(&asidStackPos)] = x;
+	asidStack[AtomicDecrement(&asidStackPos)] = x;
 }
 
 static processInfo* psTable[256];

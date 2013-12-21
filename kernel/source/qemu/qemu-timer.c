@@ -43,7 +43,7 @@ void timerInit()
 int timerStart(int freq, isr_t isr)
 {
 	if (tmrHandlePos == MAX_TIMER) return -1;
-	int timer = tmrHandles[tmrHandlePos++];
+	int timer = tmrHandles[AtomicPostIncrement(&tmrHandlePos)];
 
 	tmrIsrs[timer] = isr;
 	REG_TMRLOAD(timer) = _freq2cnt(freq);
@@ -69,7 +69,7 @@ void timerPause(int timer, bool bPause)
 void timerStop(int timer)
 {
 	REG_TMRCNT(timer) = 0;
-	tmrHandles[--tmrHandlePos] = timer;
+	tmrHandles[AtomicDecrement(&tmrHandlePos)] = timer;
 }
 
 void tmrIsr0(u32* regs)
