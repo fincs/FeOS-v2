@@ -45,19 +45,6 @@ void irqDisable(int ctrlId, u32 mask)
 	}
 }
 
-static u32 oldIrqState;
-
-void irqSuspend(void)
-{
-	oldIrqState = PIC_IntEnable;
-	PIC_IntEnable = 0;
-}
-
-void irqRestore(void)
-{
-	PIC_IntEnable = oldIrqState;
-}
-
 void KeIrqEntry(u32* regs)
 {
 	u32 mask;

@@ -117,6 +117,13 @@ static inline void CpuIrqDisable()
 	asm volatile("cpsid i");
 }
 
+static inline u32 CpuGetCPSR()
+{
+	u32 ret;
+	asm volatile("mrs %[data], cpsr" : [data] "=r" (ret));
+	return ret;
+}
+
 static inline void CpuRestoreModeRegs(int mode, u32 sp, u32 lr)
 {
 	u32 cpsr, spsr;

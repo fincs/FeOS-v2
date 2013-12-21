@@ -27,8 +27,8 @@ u32 irqFlags(int ctrlId);
 
 #define irqClear(ctrlId, mask) irqSet((ctrlId), (mask), nullptr)
 
-void irqSuspend(void); // implemented by HAL
-void irqRestore(void); // implemented by HAL
+void irqSuspend(void);
+void irqRestore(void);
 
 void KeIrqEntry(u32* regs); // implemented by HAL
 
