@@ -38,6 +38,9 @@ void KioInit(void)
 
 	// Enable UART0, receive & transfer part of UART.
 	UART0_CR = BIT(0) | BIT(8) | BIT(9);
+
+	gpioSetPinFunc(GPIO_PIN_OKLED, GPF_OUTPUT);
+	gpioSetPinVal(GPIO_PIN_OKLED, false); // 0=LED on, 1=LED off
 }
 
 void KioWrite(const void* buf, u32 size)
