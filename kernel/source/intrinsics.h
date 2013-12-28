@@ -58,6 +58,16 @@ static inline void CpuFlushBtac()
 	asm volatile("mcr p15, 0, %[data], c7, c5, 6" :: [data] "r" (0));
 }
 
+static inline void CpuSyncBarrier()
+{
+	asm volatile("mcr p15, 0, %[data], c7, c10, 4" :: [data] "r" (0));
+}
+
+static inline void CpuMemBarrier()
+{
+	asm volatile("mcr p15, 0, %[data], c7, c10, 5" :: [data] "r" (0));
+}
+
 // Cache ops
 
 static inline void CpuEnableCaches()
