@@ -36,13 +36,13 @@ void __init_pagetables(u32 totalMemSize)
 	// Prepare dummy temp trampoline
 	u32 pos = (u32)__load_addr &~ (MEGABYTE-1);
 	__temp_sectIdx = L1_INDEX(pos);
-	tab[__temp_sectIdx] = MMU_L1_SECT1MB | pos | MMU_L1_RONA;
+	tab[__temp_sectIdx] = MMU_L1_SECT1MB | pos | MMU_L1_RONA | MMU_L1_UNCACHED;
 
 	// Prepare I/O region (HACKISH)
 	pos = (u32)__devmem_addr - MEGABYTE;
 	int size = ((u32)__devmem_size + MEGABYTE - 1) >> 20; // MB align - HACKISH
 	for (i = 0; i < size; i ++)
-		tab[L1_INDEX(0xa0000000) + i] = MMU_L1_SECT1MB | (pos += MEGABYTE) | MMU_L1_RWNA;
+		tab[L1_INDEX(0xa0000000) + i] = MMU_L1_SECT1MB | (pos += MEGABYTE) | MMU_L1_RWNA | MMU_L1_DEVICEMEM;
 
 	// Prepare coarse table for kernel
 	tab[L1_INDEX((u32)__kmem_start)] = MMU_L1_COARSE | (u32)(tab + 4096);
@@ -87,7 +87,7 @@ void __init_pagetables(u32 totalMemSize)
 	size = 5; // 20 KB, enough to fit the two L1 and L2 pagetables
 	pos = (u32)__pagetables - 0x1000;
 	for (i = 0; i < 5; i ++)
-		tab[i] = MMU_L2_PAGE4K | (pos += 0x1000) | MMU_L2_RWNA | MMU_L2_XN_4K;
+		tab[i] = MMU_L2_PAGE4K | (pos += 0x1000) | MMU_L2_RWNA | MMU_L2_XN_4K | MMU_L2_4K_UNCACHED;
 
 	// CPU exception vector memory - Read-only, executable, cacheable
 	tab[L2_INDEX(0xFFFF0000)] = MMU_L2_PAGE4K | vecPos | MMU_L2_RONA | MMU_L2_4K_CACHED;
@@ -101,5 +101,5 @@ void __init_pagetables(u32 totalMemSize)
 	tab = __pagetables + L1_INDEX(0x80000000);
 	pos -= MEGABYTE;
 	for (i = 0; i < size; i ++)
-		*tab++ = MMU_L1_SECT1MB | (pos += MEGABYTE) | MMU_L1_RWNA | MMU_L1_TEX(1);
+		*tab++ = MMU_L1_SECT1MB | (pos += MEGABYTE) | MMU_L1_RWNA | MMU_L1_UNCACHED;
 }
