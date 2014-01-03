@@ -22,7 +22,9 @@ void* sbrk(int delta)
 
 	if (!delta) return heapPtr;
 
-	//kputs("<sbrk> real work\n");
+#ifdef DEBUG
+	kputs("<sbrk> real work\n");
+#endif
 
 	void* ret = heapPtr;
 	int i;
@@ -39,7 +41,9 @@ void* sbrk(int delta)
 				void* page = MemMapPage(nextPage, PAGE_W);
 				if (!page)
 					return ((void*)-1); // Out of memory
-				//kprintf("<sbrk> mapped %p\n", page);
+#ifdef DEBUG
+				kprintf("<sbrk> mapped %p\n", page);
+#endif
 				nextPage = (char*)page + 0x1000;
 				heapPages ++;
 			}
@@ -63,10 +67,14 @@ void* sbrk(int delta)
 			nextPage = (char*)nextPage - 0x1000;
 			heapPages --;
 			MemUnmapPage(nextPage);
-			//kprintf("<sbrk> unmapped %p\n", nextPage);
+#ifdef DEBUG
+			kprintf("<sbrk> unmapped %p\n", nextPage);
+#endif
 		}
 	}
 
-	//kputs("<sbrk> successful return\n");
+#ifdef DEBUG
+	kputs("<sbrk> successful return\n");
+#endif
 	return ret;
 }

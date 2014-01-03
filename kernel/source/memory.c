@@ -27,7 +27,7 @@ void MemInit(u32 memSize)
 	g_usableMem = __temp_freeMB;
 	g_physBase = __temp_physStart;
 
-	kprintf("<MemInit> totalMem: %u bytes - usableMem: %u bytes - physBase: %p\n", g_totalMem, g_usableMem, g_physBase);
+	kprintf("<MemInit> totalMem: %u bytes - usableMem: %u MB - physBase: %p\n", g_totalMem, g_usableMem, g_physBase);
 
 	// Initialize buddy bitmaps
 	u8* pos = PHYSICAL_MEMORY + sizeof(pageinfo_t)*(g_usableMem<<8);
@@ -252,6 +252,10 @@ void* MemMapPage(void* vaddr, int flags)
 	// Initialize page structure
 	pPage->refCount = 1;
 	pPage->flags = PAGE_COLOUR(vaddr);
+#ifdef DEBUG
+	kprintf("{DBG} coarseInfo: %p\n", coarseInfo);
+	kprintf("{DBG} pPage: %p\n", pPage);
+#endif
 	AtomicIncrement(&coarseInfo->pageCount);
 
 	// Zerofill page memory
