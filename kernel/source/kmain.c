@@ -104,7 +104,7 @@ int kmain(u32 memSize)
 	vspacetest();
 
 	kputs("<irqtest> Installing Timer ISR...\n");
-	timerStart(TIMER_HZ(60), nullptr); //myTimerIsr);
+	int timer = timerStart(TIMER_HZ(60), nullptr); //myTimerIsr);
 	
 	kputs("<kmain> entering idle loop\n");
 	SemaphoreInit(&mySem, 1);
@@ -116,7 +116,7 @@ int kmain(u32 memSize)
 	for (i = 0; i < 64; i ++)
 	{
 		kputc('T');
-		ThrWaitForIRQ(0, BIT(4));
+		timerWaitForIRQ(timer);
 	}
 
 	SemaphoreUp(&mySem);

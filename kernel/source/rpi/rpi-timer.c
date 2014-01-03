@@ -74,3 +74,8 @@ void timerStop(int timer)
 	irqDisable(0, IRQ0_TIMER(timer));
 	tmrHandles[AtomicDecrement(&tmrHandlePos)] = timer;
 }
+
+void timerWaitForIRQ(int timer)
+{
+	ThrWaitForIRQ(0, IRQ0_TIMER(timer));
+}

@@ -58,7 +58,7 @@ static int ThrTestMain(const char* str)
 	for (i = 0; i < 64; i ++)
 	{
 		kputc('R');
-		ThrWaitForIRQ(0, BIT(4));
+		timerWaitForIRQ(thrTimerId);
 	}
 	SemaphoreUp(&mySem);
 

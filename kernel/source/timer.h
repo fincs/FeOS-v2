@@ -18,6 +18,7 @@ int timerStart(int freq, isr_t isr);
 int timerRead(int timer);
 void timerPause(int timer, bool bPause);
 void timerStop(int timer);
+void timerWaitForIRQ(int timer);
 
 // The following is only used by the kernel
 void timerInit();
