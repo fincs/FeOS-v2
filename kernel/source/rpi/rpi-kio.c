@@ -52,8 +52,6 @@ void KioWrite(const void* buf, u32 size)
 
 void KioWriteByte(int x)
 {
-	if (x == '\n')
-		KioWriteByte('\r');
 	while (UART0_FR & BIT(5));
 	UART0_DR = x & 0xFF;
 }
