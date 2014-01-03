@@ -97,12 +97,12 @@ static inline void IC_InvalidateAll()
 
 static inline void DC_FlushRange(void* addr, u32 size)
 {
-	asm volatile("mcrr p15, 0, %[endAddr], %[startAddr], c14" :: [startAddr] "r" ((u32)addr), [endAddr] "r" ((u32)addr + size));
+	asm volatile("mcrr p15, 0, %[endAddr], %[startAddr], c14" :: [startAddr] "r" ((u32)addr), [endAddr] "r" ((u32)addr + size - 1));
 }
 
 static inline void IC_InvalidateRange(void* addr, u32 size)
 {
-	asm volatile("mcrr p15, 0, %[endAddr], %[startAddr], c5" :: [startAddr] "r" ((u32)addr), [endAddr] "r" ((u32)addr + size));
+	asm volatile("mcrr p15, 0, %[endAddr], %[startAddr], c5" :: [startAddr] "r" ((u32)addr), [endAddr] "r" ((u32)addr + size - 1));
 }
 
 #else
