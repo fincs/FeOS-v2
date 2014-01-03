@@ -101,5 +101,5 @@ void __init_pagetables(u32 totalMemSize)
 	tab = __pagetables + L1_INDEX(0x80000000);
 	pos -= MEGABYTE;
 	for (i = 0; i < size; i ++)
-		*tab++ = MMU_L1_SECT1MB | (pos += MEGABYTE) | MMU_L1_RWNA;
+		*tab++ = MMU_L1_SECT1MB | (pos += MEGABYTE) | MMU_L1_RWNA | MMU_L1_TEX(1);
 }

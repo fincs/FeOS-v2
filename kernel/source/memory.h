@@ -27,18 +27,20 @@
 #define MMU_L2_NG     BIT(11)
 #define MMU_L2_TEX_4K(n) ((n)<<6)
 #define MMU_L2_TEX_64K(n) ((n)<<12)
+#define MMU_L2_C      BIT(4)
+#define MMU_L2_B      BIT(3)
 
 #define MMU_AP_NANA 0
 #define MMU_AP_RWNA 1
 #define MMU_AP_RWRO 2
 #define MMU_AP_RWRW 3
 
-#define MMU_TEX_WBWA 1 // write-back, write-allocated (also includes read)
-#define MMU_TEX_WTRA 2 // write-through, read-allocated
-#define MMU_TEX_WBRA 3 // write-back, read-allocated
+#define MMU_CP_WBWA 1 // write-back, write-allocated (also includes read)
+#define MMU_CP_WTRA 2 // write-through, read-allocated
+#define MMU_CP_WBRA 3 // write-back, read-allocated
 
 // Default cache options
-#define MMU_L2_4K_CACHED MMU_L2_TEX_4K(MMU_TEX_WBRA)
+#define MMU_L2_4K_CACHED (MMU_L2_TEX_4K(4|MMU_CP_WBRA) | MMU_L2_C | MMU_L2_B)
 
 #define MMU_L1_NANA MMU_L1_AP(MMU_AP_NANA)
 #define MMU_L1_RWNA MMU_L1_AP(MMU_AP_RWNA)
