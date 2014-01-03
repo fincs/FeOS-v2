@@ -29,7 +29,7 @@ void irqDisable(int ctrlId, u32 mask)
 void KeIrqEntry(u32* regs)
 {
 	u32 mask;
-	while ((mask = REG_IRQFlags[2]))
+	while ((mask = REG_IRQFlags[0]))
 	{
 		u32 mask0 = mask & 0x7F;
 		if (mask0)
@@ -39,10 +39,10 @@ void KeIrqEntry(u32* regs)
 		}
 		if (mask & 0x7D00) // BIT(8) or any of BIT(10..14) are active
 		{
-			irqDispatch(0, REG_IRQFlags[0], regs);
+			irqDispatch(0, REG_IRQFlags[1], regs);
 			mask &= ~0x7D00;
 		}
 		if (mask)
-			irqDispatch(1, REG_IRQFlags[1], regs);
+			irqDispatch(1, REG_IRQFlags[2], regs);
 	}
 }
