@@ -144,6 +144,7 @@ void ThrYield(void)
 	if (ThrCtxSetJmp(&curT->ctx))
 		return;
 
+	CpuSyncBarrier();
 	ThrCtxLongJmp(&nextT->ctx);
 }
 
@@ -196,6 +197,7 @@ void ThrTimerISR(u32* regs)
 	sched->curThread = nextT;
 	ThrCtxCopy(&curT->ctx, (const cpuContext*)regs, false);
 	ThrCtxCopy((cpuContext*)regs, &nextT->ctx, true);
+	CpuSyncBarrier();
 }
 
 threadInfo* ThrScheduler(schedulerInfo* sched, bool isPreempt)

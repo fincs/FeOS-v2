@@ -58,7 +58,7 @@ static inline void CpuFlushBtac()
 	asm volatile("mcr p15, 0, %[data], c7, c5, 6" :: [data] "r" (0));
 }
 
-static inline void CpuSyncBarrier()
+static inline void CpuSyncBarrier() // AKA DC_DrainWriteBuffer on FeOS/DS
 {
 	asm volatile("mcr p15, 0, %[data], c7, c10, 4" :: [data] "r" (0));
 }
