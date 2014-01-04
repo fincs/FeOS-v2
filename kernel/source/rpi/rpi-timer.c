@@ -20,7 +20,7 @@ static int tmrHandlePos;
 #define EMIT_ISR(n) \
 static void tmrIsr##n(u32* regs) \
 { \
-	REG_TMRCNT |= BIT(n); \
+	REG_TMRCNT = BIT(n); \
 	REG_TMRCMP[n] += tmrPeriods[n]; \
 	if (tmrIsrs[n]) \
 		tmrIsrs[n](regs); \
