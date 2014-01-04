@@ -109,6 +109,15 @@ static inline u32 virt2phys(void* x)
 	return g_physBase + (u8*)x - PHYSICAL_MEMORY;
 }
 
+static inline void* safe_phys2virt(u32 x)
+{
+	if (x >= g_physBase)
+		return phys2virt(x);
+	extern u32 __pagetables[];
+	x -= (u32)__pagetables;
+	return (u8*)MASTER_PAGETABLE + x;
+}
+
 typedef struct tag_pageinfo pageinfo_t;
 
 // KEEP THIS STRUCTURE SIZED TO A POWER OF TWO!
@@ -170,3 +179,6 @@ void* MemMapPage(void* address, int flags);
 bool MemProtectPage(void* address, int flags);
 // Frees a page previously mapped by MemMapPage.
 bool MemUnmapPage(void* address);
+
+// Translates a virtual address to a physical address. ~0 = failure
+u32 MemTranslateAddr(void* address);

@@ -337,3 +337,36 @@ bool MemUnmapPage(void* vaddr)
 	CpuFlushTlbByAddr(vaddr);
 	return true;
 }
+
+u32 MemTranslateAddr(void* address)
+{
+	u32 vaddr = (u32)address;
+	u32 L1entry = (_IsKernel(address) ? MASTER_PAGETABLE : (vu32*)phys2virt(CpuGetLowerPT() &~ 0x1F))[L1_INDEX(vaddr)];
+	switch (L1entry & 3)
+	{
+		case MMU_L1_COARSE:
+		{
+			L1entry &= ~(BIT(10)-1);
+			u32 L2entry = ((vu32*)safe_phys2virt(L1entry))[L2_INDEX(vaddr)];
+			if (L2entry & MMU_L2_PAGE4K)
+			{
+				L2entry &= ~(BIT(12)-1); // Clear 4K
+				L2entry |= vaddr & (BIT(12)-1); // Add offset
+				return L2entry;
+			}
+			return ~0; // Either fault or unsupported
+		}
+
+		case MMU_L1_SECT1MB:
+		{
+			if (L1entry & BIT(18)) // 16MB Section
+				return ~0; // Unsupported
+			L1entry &= ~(BIT(20)-1); // Clear MB
+			L1entry |= vaddr & (BIT(20)-1); // Add offset
+			return L1entry;
+		}
+
+		default: // Invalid
+			return ~0;
+	}
+}
