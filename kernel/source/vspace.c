@@ -42,7 +42,9 @@ void vspace_freeAll(HVSPACE h)
 HVSPACE vspace_alloc(HVSPACE h, u32 size)
 {
 	size = (size + 0xFFF) >> 12;
+#ifdef DEBUG
 	kprintf("<vspace_alloc> Caller requested %u pages\n", size);
+#endif
 
 	vspacetoken_t* t;
 	for (t = (vspacetoken_t*)h; t; t = t->next)
@@ -86,7 +88,9 @@ void vspace_free(HVSPACE vs)
 	// Coalesce on the RIGHT
 	if ((t2 = t->next) && !(t2->flags & VSPACEF_USED)) // need to do it only once
 	{
+#ifdef DEBUG
 		kputs("<vspace_free> Coalescing on the right...\n");
+#endif
 		t->pcount += t2->pcount;
 		t->next = t2->next;
 		if (t2->next) t2->next->prev = t;
@@ -96,7 +100,9 @@ void vspace_free(HVSPACE vs)
 	// Coalesce on the LEFT
 	if ((t2 = t->prev) && !(t2->flags & VSPACEF_USED)) // need to do it only once
 	{
+#ifdef DEBUG
 		kputs("<vspace_free> Coalescing on the left...\n");
+#endif
 		t2->pcount += t->pcount;
 		t2->next = t->next;
 		if (t->next) t->next->prev = t2;
