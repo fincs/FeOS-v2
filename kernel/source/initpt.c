@@ -69,7 +69,7 @@ void __init_pagetables(u32 totalMemSize)
 		*tab++ = MMU_L2_PAGE4K | (pos += 0x1000) | MMU_L2_RONA | MMU_L2_XN_4K | MMU_L2_4K_CACHED;
 
 	// DATA section - Read/write, non-executable, cacheable
-	size = (u32)__lma_data_size >> 12;
+	size = ((u32)__lma_data_size + 0xFFF) >> 12;
 	for (i = 0; i < size; i ++)
 		*tab++ = MMU_L2_PAGE4K | (pos += 0x1000) | MMU_L2_RWNA | MMU_L2_XN_4K | MMU_L2_4K_CACHED;
 
