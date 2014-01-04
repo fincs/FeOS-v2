@@ -161,6 +161,8 @@ typedef struct
 	threadQueue waiting;
 } semaphore_t;
 
+#define SEMAPHORE_STATIC_INIT(counter) { (counter), { nullptr, nullptr } }
+
 static inline void SemaphoreInit(semaphore_t* s, int counter)
 {
 	s->counter = counter;
