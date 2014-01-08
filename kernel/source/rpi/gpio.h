@@ -27,17 +27,20 @@ enum
 	GPF_MASK = GPF_ALT3,
 };
 
-#define GPIO_PIN_OKLED 16
+#define GPIO_PIN_ACTLED 16
 
 static inline void gpioSetPinFunc(int pin, int function)
 {
+	CpuSyncBarrier();
 	int regId = pin/10;
 	int regBit = (pin%10)*3;
 	REG_GPFSEL[regId] = (REG_GPFSEL[regId] &~ (GPF_MASK<<regBit)) | ((function&GPF_MASK)<<regBit);
+	CpuSyncBarrier();
 }
 
 static inline void gpioSetPinVal(int pin, bool value)
 {
+	CpuSyncBarrier();
 	int x = 0;
 	if (pin >= 32)
 		x = 1, pin -= 32;
@@ -45,4 +48,5 @@ static inline void gpioSetPinVal(int pin, bool value)
 		REG_GPSET[x] = BIT(pin);
 	else
 		REG_GPCLR[x] = BIT(pin);
+	CpuSyncBarrier();
 }

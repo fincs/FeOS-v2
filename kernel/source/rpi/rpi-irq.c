@@ -10,25 +10,32 @@
 void irqInit()
 {
 	register int i;
+	CpuSyncBarrier();
 	for (i = 0; i < 3; i ++)
 		REG_IRQDisable[i] = ~0;
 	REG_FIQCtrl = 0; // not using FIQ
+	CpuSyncBarrier();
 	CpuIrqEnable();
 }
 
 void irqEnable(int ctrlId, u32 mask)
 {
+	CpuSyncBarrier();
 	REG_IRQEnable[ctrlId] |= mask;
+	CpuSyncBarrier();
 }
 
 void irqDisable(int ctrlId, u32 mask)
 {
+	CpuSyncBarrier();
 	REG_IRQDisable[ctrlId] |= mask;
+	CpuSyncBarrier();
 }
 
 void KeIrqEntry(u32* regs)
 {
 	u32 mask;
+	CpuSyncBarrier();
 	while ((mask = REG_IRQFlags[0]))
 	{
 		u32 mask0 = mask & 0x7F;
@@ -45,4 +52,5 @@ void KeIrqEntry(u32* regs)
 		if (mask)
 			irqDispatch(1, REG_IRQFlags[2], regs);
 	}
+	CpuSyncBarrier();
 }

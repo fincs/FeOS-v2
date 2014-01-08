@@ -6,8 +6,10 @@
 
 void KioInit(void)
 {
+	CpuSyncBarrier();
 	// Disable UART0
 	UART0_CR = 0;
+	CpuSyncBarrier();
 
 	// Disable pull up/down for all GPIO pins
 	REG_GPPUD = 0;
@@ -39,19 +41,28 @@ void KioInit(void)
 	// Enable UART0, receive & transfer part of UART.
 	UART0_CR = BIT(0) | BIT(8) | BIT(9);
 
-	gpioSetPinFunc(GPIO_PIN_OKLED, GPF_OUTPUT);
-	gpioSetPinVal(GPIO_PIN_OKLED, false); // 0=LED on, 1=LED off
+	gpioSetPinFunc(GPIO_PIN_ACTLED, GPF_OUTPUT);
+	gpioSetPinVal(GPIO_PIN_ACTLED, false); // 0=LED on, 1=LED off
+}
+
+static inline void _WriteByte(int x)
+{
+	while (UART0_FR & BIT(5));
+	UART0_DR = x & 0xFF;
 }
 
 void KioWrite(const void* buf, u32 size)
 {
+	CpuSyncBarrier();
 	const u8* d = (const u8*)buf;
 	while (size--)
-		KioWriteByte(*d++);
+		_WriteByte(*d++);
+	CpuSyncBarrier();
 }
 
 void KioWriteByte(int x)
 {
-	while (UART0_FR & BIT(5));
-	UART0_DR = x & 0xFF;
+	CpuSyncBarrier();
+	_WriteByte(x);
+	CpuSyncBarrier();
 }
