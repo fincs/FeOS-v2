@@ -6,7 +6,7 @@
 // 1 - Interrupts 32..63
 // 2 - "Base" interrupts
 #define MAX_IRQCTRL 3
-#define MAX_TIMER 4
+#define MAX_TIMER 2 // timers 0 and 2 are reserved by GPU
 #define TIMER_TICK_FREQ 1000000
 
 #define IRQ0_TIMER(n)   BIT(0+(n)) // 0..3
