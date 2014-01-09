@@ -29,5 +29,5 @@ u32 mailboxExecCmd(int channel, u32 value)
 
 	CpuSyncBarrier();
 	SemaphoreUp(&mbSem);
-	return value;
+	return value &~ MBCHN__MASK;
 }
