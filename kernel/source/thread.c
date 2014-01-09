@@ -261,9 +261,9 @@ void SemaphoreUp(semaphore_t* s)
 	}
 
 	// Wake up first thread
-	threadInfo* t = threadQueue_pop(&s->waiting);
-	schedulerInfo* sched = t->sched;
+	schedulerInfo* sched = ThrSchedInfo();
 	SpinlockAcquire(&sched->lock);
+	threadInfo* t = threadQueue_pop(&s->waiting);
 	t->flags &= ~THRFLAG_BLOCKED;
 	threadQueue_add(&sched->ready[t->prio][sched->which], t);
 	sched->readyCount[sched->which] ++;
@@ -275,11 +275,8 @@ void SemaphoreUp(semaphore_t* s)
 
 void SemaphoreDown(semaphore_t* s)
 {
-	if (s->counter)
-	{
-		AtomicDecrement(&s->counter);
+	if (!AtomicDecrementCompareZero(&s->counter))
 		return;
-	}
 
 	// Put thread to wait
 	schedulerInfo* sched = ThrSchedInfo();

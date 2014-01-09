@@ -188,3 +188,28 @@ static inline void CpuSaveModeRegs(int mode, u32* pSp, u32* pLr)
 	*pSp = sp;
 	*pLr = lr;
 }
+
+static inline bool AtomicDecrementCompareZero(vu32* ptr)
+{
+	u32 ret = 0, temp, temp2;
+	asm volatile
+	(
+		"mcr p15, 0, r0, c7, c10, 5\n\t"
+		"1: ldrex %[temp], [%[ptr]]\n\t"
+		"cmp %[temp], #0\n\t"
+		"moveq %[ret], #1\n\t"
+		"beq 2f\n\t"
+		"sub %[temp], #1\n\t"
+		"strex %[temp2], %[temp], [%[ptr]]\n\t"
+		"cmp %[temp2], #0\n\t"
+		"bne 1b\n\t"
+		"2: mcr p15, 0, r0, c7, c10, 5"
+		:
+		[ret] "+r" (ret),
+		[ptr] "+r" (ptr),
+		[temp] "=r" (temp),
+		[temp2] "=r" (temp2)
+		:: "cc"
+	);
+	return (bool)ret;
+}
