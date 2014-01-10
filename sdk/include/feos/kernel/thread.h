@@ -8,6 +8,18 @@
 #define SCHEDULER_RR_DEFAULT_Q 10 // 10 100Hz ticks = 100 ms
 #endif
 
+typedef struct
+{
+	u32 r[16]; // sp,lr: USR/SYS mode
+	u32 cpsr;
+	u32 svcSp, svcLr;
+
+	/*
+	u32 fpscr;
+	u32 s[32];
+	*/
+} cpuContext;
+
 typedef vu32 spinlock_t;
 
 static inline void SpinlockAcquire(spinlock_t* l)
@@ -31,6 +43,8 @@ static inline void SpinlockRelease(spinlock_t* l)
 
 typedef struct tag_threadInfo threadInfo;
 typedef struct tag_threadQueue threadQueue;
+
+_STATIC cpuContext* ThrGetContext(threadInfo* t);
 
 struct tag_threadQueue
 {

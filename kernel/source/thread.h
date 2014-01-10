@@ -1,18 +1,6 @@
 #pragma once
 #include "common.h"
 
-typedef struct
-{
-	u32 r[16]; // sp,lr: USR/SYS mode
-	u32 cpsr;
-	u32 svcSp, svcLr;
-
-	/*
-	u32 fpscr;
-	u32 s[32];
-	*/
-} cpuContext;
-
 typedef struct tag_schedulerInfo schedulerInfo;
 
 enum
@@ -48,7 +36,10 @@ struct tag_threadInfo
 	};
 };
 
-// Private stuff
+static inline cpuContext* ThrGetContext(threadInfo* t)
+{
+	return &t->ctx;
+}
 
 static inline void threadQueue_add(threadQueue* q, threadInfo* t)
 {
