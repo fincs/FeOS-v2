@@ -10,6 +10,7 @@ typedef struct
 } buddyorder_t;
 
 static buddyorder_t orderinfo[MAX_ORDERS];
+static semaphore_t mmMutex = SEMAPHORE_STATIC_INIT(1);
 
 static inline int _ToggleBit(int order, pageinfo_t* page)
 {
@@ -103,8 +104,12 @@ static bool _MemRefillOrder(int order)
 
 pageinfo_t* MemAllocPage(int order)
 {
+	SemaphoreDown(&mmMutex);
 	if (!_MemRefillOrder(order))
+	{
+		SemaphoreUp(&mmMutex);
 		return nullptr; // out of memory!
+	}
 
 	// Pop a page
 	pageinfo_t* ret = orderinfo[order].first;
@@ -112,11 +117,13 @@ pageinfo_t* MemAllocPage(int order)
 	if (ret->next)
 		ret->next->prev = nullptr;
 	_ToggleBit(order, ret);
+	SemaphoreUp(&mmMutex);
 	return ret;
 }
 
 void MemFreePage(pageinfo_t* page, int order)
 {
+	SemaphoreDown(&mmMutex);
 	if (_ToggleBit(order, page) || order == (MAX_ORDERS-1))
 	{
 		// Put this page back into the list
@@ -125,6 +132,7 @@ void MemFreePage(pageinfo_t* page, int order)
 		if (page->next)
 			page->next->prev = page;
 		orderinfo[order].first = page;
+		SemaphoreUp(&mmMutex);
 		return;
 	}
 
@@ -134,8 +142,6 @@ void MemFreePage(pageinfo_t* page, int order)
 #ifdef DEBUG
 	kprintf("<MemFreePage> {%d} Coalescing %p and %p\n", order, page, buddy);
 #endif
-
-	// TODO: implement
 
 	// Remove the buddy from the linked list
 	{
@@ -156,6 +162,7 @@ void MemFreePage(pageinfo_t* page, int order)
 #endif
 
 	// Free the page
+	SemaphoreUp(&mmMutex);
 	MemFreePage(page, order+1);
 }
 
@@ -181,8 +188,7 @@ static vu32* _GetCoarseTable(void* vaddr, bool bCreate, vu32** ppL1Entry)
 	if (isK && (idx == L1_INDEX(0xfff00000) || idx == L1_INDEX(0xe0000000)))
 		return nullptr; // Can't touch that memory region! (Kernel code and system vectors)
 
-	//vu32* entry = (isK ? MASTER_PAGETABLE : (vu32*)phys2virt(CpuGetLowerPT() &~ 0x1F)) + idx;
-	vu32* entry = MASTER_PAGETABLE + idx; // FUTURE: uncomment line above - this is an ugly workaround to let the initial TTB0 to work
+	vu32* entry = (isK ? MASTER_PAGETABLE : (vu32*)safe_phys2virt(CpuGetLowerPT() &~ 0x1F)) + idx;
 	vu32* coarse;
 
 	switch (*entry & 3)
@@ -202,8 +208,9 @@ static vu32* _GetCoarseTable(void* vaddr, bool bCreate, vu32** ppL1Entry)
 			coarse = (vu32*)page2vphys(pCoarsePage);
 
 			// Zerofill stuff
-			for (i = 0; i < 1024; i ++)
+			for (i = 0; i < 256; i ++)
 				coarse[i] = 0;
+			_InitCoarseInfo((coarseinfo_t*)(coarse + 256));
 			*entry = MMU_L1_COARSE | (u32)virt2phys((void*)coarse);
 			break;
 		}
@@ -239,15 +246,23 @@ void* MemMapPage(void* vaddr, int flags)
 
 	bool isK = _IsKernel(vaddr);
 	coarseinfo_t* coarseInfo = (coarseinfo_t*)(entry + 256);
+	semaphore_t* pMutex = &coarseInfo->mutex;
+	SemaphoreDown(pMutex);
 	entry += L2_INDEX(vaddr);
 
 	if (*entry & 3)
+	{
+		SemaphoreUp(pMutex);
 		return nullptr; // Page already exists
+	}
 
 	// Allocate a new page
 	pageinfo_t* pPage = MemAllocPage(PAGEORDER_4K);
 	if (!pPage)
+	{
+		SemaphoreUp(pMutex);
 		return nullptr; // Out of memory
+	}
 
 	// Initialize page structure
 	pPage->refCount = 1;
@@ -256,7 +271,7 @@ void* MemMapPage(void* vaddr, int flags)
 	kprintf("{DBG} coarseInfo: %p\n", coarseInfo);
 	kprintf("{DBG} pPage: %p\n", pPage);
 #endif
-	AtomicIncrement(&coarseInfo->pageCount);
+	coarseInfo->pageCount ++;
 
 	// Zerofill page memory
 	u32* pageMem = (u32*)page2vphys(pPage);
@@ -272,6 +287,7 @@ void* MemMapPage(void* vaddr, int flags)
 	// No need to do anything further:
 	// - TLB doesn't store entries that do not exist
 	// - Cache doesn't cache invalid addresses
+	SemaphoreUp(pMutex);
 	return vaddr;
 }
 
@@ -283,16 +299,22 @@ bool MemProtectPage(void* vaddr, int flags)
 		return false; // bail out
 
 	bool isK = _IsKernel(vaddr);
+	semaphore_t* pMutex = &((coarseinfo_t*)(entry+256))->mutex;
+	SemaphoreDown(pMutex);
 	entry += L2_INDEX(vaddr);
 
 	if (!(*entry & 2))
+	{
+		SemaphoreUp(pMutex);
 		return false; // Missing or unsupported page
+	}
 
 	u32 setting = *entry;
 	setting &= ~MMU_L2_4K_PMASK;
 	setting |= _GetPermissions(flags, isK);
 	*entry = setting;
 	CpuFlushTlbByAddr(vaddr);
+	SemaphoreUp(pMutex);
 	return true;
 }
 
@@ -308,10 +330,15 @@ bool MemUnmapPage(void* vaddr)
 		return false; // bail out
 
 	coarseinfo_t* coarseInfo = (coarseinfo_t*)(entry + 256);
+	semaphore_t* pMutex = &coarseInfo->mutex;
+	SemaphoreDown(pMutex);
 	entry += L2_INDEX(vaddr);
 
 	if (!(*entry & 2))
+	{
+		SemaphoreUp(pMutex);
 		return false; // Missing or unsupported page
+	}
 
 	// Retrieve page structure
 	pageinfo_t* pPage = vphys2page(phys2virt(*entry & ~0xFFF));
@@ -324,17 +351,20 @@ bool MemUnmapPage(void* vaddr)
 		MemFreePage(pPage, PAGEORDER_4K);
 	}
 
-	if (!AtomicDecrement(&coarseInfo->pageCount))
+	if (!--coarseInfo->pageCount)
 	{
 		// Free coarse table
 		pageinfo_t* pPage2 = vphys2page(phys2virt(*entry2 & ~0xFFF));
 		MemFreePage(pPage2, PAGEORDER_4K);
 		*entry2 = 0;
+		pMutex = nullptr;
 	}
 
 	// Zap entry
 	*entry = 0;
 	CpuFlushTlbByAddr(vaddr);
+	if (pMutex)
+		SemaphoreUp(pMutex);
 	return true;
 }
 

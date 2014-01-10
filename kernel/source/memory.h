@@ -132,7 +132,14 @@ struct tag_pageinfo
 typedef struct
 {
 	u32 pageCount;
+	semaphore_t mutex;
 } coarseinfo_t;
+
+static inline void _InitCoarseInfo(coarseinfo_t* info)
+{
+	info->pageCount = 0;
+	SemaphoreInit(&info->mutex, 1);
+}
 
 enum
 {

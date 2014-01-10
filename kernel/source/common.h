@@ -20,9 +20,9 @@ u32 malloc_usable_size(void* ptr);
 #include "irq.h"
 #include "timer.h"
 #include "kio.h"
-#include "memory.h"
 #include "vspace.h"
 #include "process.h"
 #include "thread.h"
+#include "memory.h"
 
 extern u32** g_SyscallTablePtr;
