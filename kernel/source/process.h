@@ -1,7 +1,5 @@
 #include "common.h"
 
-typedef struct tag_processInfo processInfo;
-
 struct tag_processInfo
 {
 	int refCount;
@@ -12,7 +10,4 @@ struct tag_processInfo
 
 // Private functions
 processInfo* PsInit(void);
-processInfo* PsCreate(void);
 void PsCtxSwitch(processInfo* p);
-
-processInfo* PsFindByASID(int asid);

@@ -32,7 +32,7 @@ TARGET   := FeOSd.$(FEOSPLAT)
 BUILD    := build_dbg.$(FEOSPLAT)
 endif
 SOURCES  := source source/$(FEOSPLAT)
-INCLUDES := include include/$(FEOSPLAT)
+INCLUDES := ../sdk/include/feos/kernel
 DATA     := data data/$(FEOSPLAT)
 
 #---------------------------------------------------------------------------------
@@ -51,7 +51,7 @@ endif
 
 ARCH := -mthumb-interwork -mcpu=$(CPU) -mtune=$(CPU) -mfpu=vfp -mfloat-abi=hard
 
-DEFINES	 := -DFEOS -DFEOS_$(FEOSPLAT) -DFEOS_PLATINCLUDE=\"$(FEOSPLAT)/platform.h\"
+DEFINES	 := -DFEOS -DFEOS_KERNEL -DFEOS_$(FEOSPLAT) -DFEOS_PLATINCLUDE=\"$(FEOSPLAT)/platform.h\"
 ifeq ($(DEBUGVER),)
 COPTFLAG :=	-O2
 DEFINES  += -DNDEBUG
@@ -69,10 +69,11 @@ endif
 CFLAGS := -g -Wall $(COPTFLAG) -funwind-tables -save-temps \
           -fomit-frame-pointer \
           -ffast-math \
+		  -fshort-wchar \
           $(ARCH)
 
 CFLAGS   += $(INCLUDE) $(DEFINES)
-CXXFLAGS := $(CFLAGS) -fno-rtti -fno-exceptions
+CXXFLAGS := $(CFLAGS) -fno-rtti -fno-exceptions -nostdinc++ -std=gnu++11
 
 ASFLAGS := -g $(ARCH) $(DEFINES)
 LDFLAGS  = -nostartfiles -nodefaultlibs -T $(TOPDIR)/ldscript/$(FEOSPLAT).spec -T $(TOPDIR)/ldscript/kernel.ld -g $(ARCH) $(foreach func,$(HOOKS),-Wl,-wrap,$(func)) -Wl,-Map,$(notdir $*.map)
@@ -120,7 +121,7 @@ endif
 export OFILES := $(addsuffix .o,$(BINFILES)) \
                  $(CPPFILES:.cpp=.o) $(CFILES:.c=.o) $(SFILES:.s=.o)
 
-export INCLUDE := $(foreach dir,$(INCLUDES),-iquote $(CURDIR)/$(dir)) \
+export INCLUDE := $(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) \
                   $(foreach dir,$(LIBDIRS),-I$(dir)/include) \
                   -I$(CURDIR)/$(BUILD)
 

@@ -1,6 +1,6 @@
 #include "../common.h"
-#include "gpio.h"
-#include "uart.h"
+#include <rpi/gpio.h>
+#include <rpi/uart.h>
 
 // Code adapted from http://wiki.osdev.org/ARM_RaspberryPi_Tutorial_C#uart.c
 

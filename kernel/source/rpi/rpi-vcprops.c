@@ -1,5 +1,5 @@
 #include "../common.h"
-#include "vcprops.h"
+#include <rpi/vcprops.h>
 
 bool vcPropsAlloc(VCPROPS* pProps, u32 bufSize)
 {

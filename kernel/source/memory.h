@@ -1,8 +1,7 @@
 #pragma once
 #include "common.h"
 
-#define MASTER_PAGETABLE ((vu32*) 0xFFF00000)
-#define PHYSICAL_MEMORY ((u8*) 0x80000000)
+#define MASTER_PAGETABLE ((vu32*)0xFFF00000)
 
 #define MMU_FAULT 0
 
@@ -88,37 +87,12 @@
 #define L1_INDEX(addr) ((u32)(addr) >> 20)
 #define L2_INDEX(addr) (((u32)(addr) >> 12) & 0xFF)
 
-#define PAGE_COLOUR(addr) (((u32)(addr) >> 12) & 3)
-
-enum
-{
-	PAGE_R = 0,
-	PAGE_W = 1,
-	PAGE_X = 2,
-};
-
 extern u32 g_totalMem, g_usableMem, g_physBase;
 
-static inline void* phys2virt(u32 x)
+static inline u32 MemGetPhysicalBase(void)
 {
-	return PHYSICAL_MEMORY + x - g_physBase;
+	return g_physBase;
 }
-
-static inline u32 virt2phys(void* x)
-{
-	return g_physBase + (u8*)x - PHYSICAL_MEMORY;
-}
-
-static inline void* safe_phys2virt(u32 x)
-{
-	if (x >= g_physBase)
-		return phys2virt(x);
-	extern u32 __pagetables[];
-	x -= (u32)__pagetables;
-	return (u8*)MASTER_PAGETABLE + x;
-}
-
-typedef struct tag_pageinfo pageinfo_t;
 
 // KEEP THIS STRUCTURE SIZED TO A POWER OF TWO!
 struct tag_pageinfo
@@ -141,6 +115,15 @@ static inline void _InitCoarseInfo(coarseinfo_t* info)
 	SemaphoreInit(&info->mutex, 1);
 }
 
+static inline void* safe_phys2virt(u32 x)
+{
+	if (x >= g_physBase)
+		return phys2virt(x);
+	extern u32 __pagetables[];
+	x -= (u32)__pagetables;
+	return (u8*)MASTER_PAGETABLE + x;
+}
+
 enum
 {
 	PAGEFLAG_CLRMASK = 3,
@@ -158,34 +141,7 @@ static inline void* page2vphys(pageinfo_t* p)
 	return PHYSICAL_MEMORY + ((p - PAGEMAP)<<12);
 }
 
-enum
-{
-	PAGEORDER_4K = 0,
-	PAGEORDER_8K,
-	PAGEORDER_16K,
-	PAGEORDER_32K,
-	PAGEORDER_64K,
-	PAGEORDER_128K,
-	PAGEORDER_256K,
-	PAGEORDER_512K,
-	PAGEORDER_1M,
-};
-
 extern vu32* g_curPageTable;
 
 // (Internal) Initializes the virtual memory address map system.
 void MemInit(u32 memSize);
-
-// (Internal) Allocation and deallocation of pages.
-pageinfo_t* MemAllocPage(int order);
-void MemFreePage(pageinfo_t* page, int order);
-
-// Allocates a new page and maps it to the specified address.
-void* MemMapPage(void* address, int flags);
-// Sets the permissions of a page.
-bool MemProtectPage(void* address, int flags);
-// Frees a page previously mapped by MemMapPage.
-bool MemUnmapPage(void* address);
-
-// Translates a virtual address to a physical address. ~0 = failure
-u32 MemTranslateAddr(void* address);

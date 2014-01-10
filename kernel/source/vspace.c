@@ -1,11 +1,9 @@
 #include "common.h"
 
-typedef struct tag_vspacetoken vspacetoken_t;
-
-struct tag_vspacetoken
+struct _tag_HVSPACE
 {
-	vspacetoken_t* next;
-	vspacetoken_t* prev;
+	HVSPACE next;
+	HVSPACE prev;
 	u32 flags, pcount;
 };
 
@@ -17,23 +15,22 @@ enum
 
 HVSPACE vspace_create(void* addr, u32 size)
 {
-	vspacetoken_t* t = (vspacetoken_t*)malloc(sizeof(vspacetoken_t));
+	HVSPACE t = (HVSPACE)malloc(sizeof(struct _tag_HVSPACE));
 	if (!t) return nullptr;
 
 	t->next = nullptr;
 	t->prev = nullptr;
 	t->flags = (u32)addr &~ VSPACEF_FMASK;
 	t->pcount = size >> 12;
-	return (HVSPACE)t;
+	return t;
 }
 
-void vspace_freeAll(HVSPACE h)
+void vspace_freeAll(HVSPACE t)
 {
-	vspacetoken_t* t = (vspacetoken_t*)h;
 	if (t->prev) return; // Invalid operation
 	while (t)
 	{
-		vspacetoken_t* next = t->next;
+		HVSPACE next = t->next;
 		free(t);
 		t = next;
 	}
@@ -46,8 +43,8 @@ HVSPACE vspace_alloc(HVSPACE h, u32 size)
 	kprintf("<vspace_alloc> Caller requested %u pages\n", size);
 #endif
 
-	vspacetoken_t* t;
-	for (t = (vspacetoken_t*)h; t; t = t->next)
+	HVSPACE t;
+	for (t = h; t; t = t->next)
 	{
 		if (t->flags & VSPACEF_USED) continue;
 		if (t->pcount < size) continue;
@@ -60,7 +57,7 @@ HVSPACE vspace_alloc(HVSPACE h, u32 size)
 		}
 
 		// Else we need to divide this block into two pieces - the first free and the second used.
-		vspacetoken_t* t2 = (vspacetoken_t*)malloc(sizeof(vspacetoken_t));
+		HVSPACE t2 = (HVSPACE)malloc(sizeof(struct _tag_HVSPACE));
 		if (!t2) return nullptr;
 		u32 rems = t->pcount - size;
 		t2->prev = t;
@@ -75,15 +72,14 @@ HVSPACE vspace_alloc(HVSPACE h, u32 size)
 		break;
 	}
 
-	return (HVSPACE)t;
+	return t;
 }
 
-void vspace_free(HVSPACE vs)
+void vspace_free(HVSPACE t)
 {
-	vspacetoken_t* t = (vspacetoken_t*)vs;
 	if (!(t->flags & VSPACEF_USED)) return; // Invalid operation
 	t->flags = t->flags &~ VSPACEF_USED;
-	vspacetoken_t* t2;
+	HVSPACE t2;
 
 	// Coalesce on the RIGHT
 	if ((t2 = t->next) && !(t2->flags & VSPACEF_USED)) // need to do it only once
@@ -112,10 +108,10 @@ void vspace_free(HVSPACE vs)
 
 u32 vspace_getAddr(HVSPACE vs)
 {
-	return ((vspacetoken_t*)vs)->flags &~ VSPACEF_FMASK;
+	return vs->flags &~ VSPACEF_FMASK;
 }
 
 u32 vspace_getPageCount(HVSPACE vs)
 {
-	return ((vspacetoken_t*)vs)->pcount;
+	return vs->pcount;
 }

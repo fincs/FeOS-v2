@@ -1,13 +1,6 @@
 #pragma once
 #include "common.h"
 
-// Atomic ops
-#define AtomicIncrement(ptr) __atomic_add_fetch((u32*)(ptr), 1, __ATOMIC_SEQ_CST)
-#define AtomicDecrement(ptr) __atomic_sub_fetch((u32*)(ptr), 1, __ATOMIC_SEQ_CST)
-#define AtomicPostIncrement(ptr) __atomic_fetch_add((u32*)(ptr), 1, __ATOMIC_SEQ_CST)
-#define AtomicPostDecrement(ptr) __atomic_fetch_sub((u32*)(ptr), 1, __ATOMIC_SEQ_CST)
-#define AtomicSwap(ptr, value) __atomic_exchange_n((u32*)(ptr), (value), __ATOMIC_SEQ_CST)
-
 static inline void CpuSetASID(int asid)
 {
 	asm volatile("mcr p15, 0, %[data], c13, c0, 1" :: [data] "r" (asid));
@@ -58,16 +51,6 @@ static inline void CpuFlushBtac()
 	asm volatile("mcr p15, 0, %[data], c7, c5, 6" :: [data] "r" (0));
 }
 
-static inline void CpuSyncBarrier() // AKA DC_DrainWriteBuffer on FeOS/DS
-{
-	asm volatile("mcr p15, 0, %[data], c7, c10, 4" :: [data] "r" (0));
-}
-
-static inline void CpuMemBarrier()
-{
-	asm volatile("mcr p15, 0, %[data], c7, c10, 5" :: [data] "r" (0));
-}
-
 // Cache ops
 
 static inline void CpuEnableCaches()
@@ -78,66 +61,8 @@ static inline void CpuEnableCaches()
 	asm volatile("mcr p15, 0, %[data], c1, c0, 0" :: [data] "r" (ret));
 }
 
-static inline void DC_DrainWriteBuffer()
-{
-	asm volatile("mcr p15, 0, %[data], c7, c10, 4" :: [data] "r" (0));
-}
-
-static inline void DC_FlushAll()
-{
-	asm volatile("mcr p15, 0, %[data], c7, c14, 0" :: [data] "r" (0));
-}
-
-static inline void IC_InvalidateAll()
-{
-	asm volatile("mcr p15, 0, %[data], c7, c5, 0" :: [data] "r" (0));
-}
-
-#ifdef HAS_FAST_CACHE_RANGE_OPS
-
-static inline void DC_FlushRange(void* addr, u32 size)
-{
-	asm volatile("mcrr p15, 0, %[endAddr], %[startAddr], c14" :: [startAddr] "r" ((u32)addr), [endAddr] "r" ((u32)addr + size - 1));
-}
-
-static inline void IC_InvalidateRange(void* addr, u32 size)
-{
-	asm volatile("mcrr p15, 0, %[endAddr], %[startAddr], c5" :: [startAddr] "r" ((u32)addr), [endAddr] "r" ((u32)addr + size - 1));
-}
-
-#else
-#error "Not implemented"
-#endif
-
 // Other ops
 
-static inline void CpuIdle()
-{
-	DC_DrainWriteBuffer(); // Apparently necessary
-	asm volatile("mcr p15, 0, %[data], c7, c0, 4" :: [data] "r" (0));
-}
-
-static inline void CpuIrqEnable()
-{
-	asm volatile("cpsie i");
-}
-
-static inline void CpuIrqDisable()
-{
-	asm volatile("cpsid i");
-}
-
-static inline u32 CpuGetCPSR()
-{
-	u32 ret;
-	asm volatile("mrs %[data], cpsr" : [data] "=r" (ret));
-	return ret;
-}
-
-static inline void CpuLoopDelay(u32 count)
-{
-	asm volatile("1: subs %[count], %[count], #1; bne 1b" :: [count] "r" (count) : "cc");
-}
 
 static inline void CpuRestoreModeRegs(int mode, u32 sp, u32 lr)
 {
@@ -187,29 +112,4 @@ static inline void CpuSaveModeRegs(int mode, u32* pSp, u32* pLr)
 	);
 	*pSp = sp;
 	*pLr = lr;
-}
-
-static inline bool AtomicDecrementCompareZero(vu32* ptr)
-{
-	u32 ret = 0, temp, temp2;
-	asm volatile
-	(
-		"mcr p15, 0, r0, c7, c10, 5\n\t"
-		"1: ldrex %[temp], [%[ptr]]\n\t"
-		"cmp %[temp], #0\n\t"
-		"moveq %[ret], #1\n\t"
-		"beq 2f\n\t"
-		"sub %[temp], #1\n\t"
-		"strex %[temp2], %[temp], [%[ptr]]\n\t"
-		"cmp %[temp2], #0\n\t"
-		"bne 1b\n\t"
-		"2: mcr p15, 0, r0, c7, c10, 5"
-		:
-		[ret] "+r" (ret),
-		[ptr] "+r" (ptr),
-		[temp] "=r" (temp),
-		[temp2] "=r" (temp2)
-		:: "cc"
-	);
-	return (bool)ret;
 }

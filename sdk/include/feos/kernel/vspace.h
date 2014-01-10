@@ -1,7 +1,6 @@
 #pragma once
-#include "common.h"
+#include "feos.h"
 
-struct _tag_HVSPACE { };
 typedef struct _tag_HVSPACE* HVSPACE;
 
 HVSPACE vspace_create(void* addr, u32 size);

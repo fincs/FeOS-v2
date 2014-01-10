@@ -1,5 +1,5 @@
 #pragma once
-#include "../common.h"
+#include "../feos.h"
 
 // BCM2835 UART register definitions
 
