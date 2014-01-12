@@ -1,6 +1,10 @@
 #pragma once
 #include "../types.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 void* memcpy(void*, const void*, size_t);
 void* memmove(void*, const void*, size_t);
 void* memset(void*, int, size_t);
@@ -16,3 +20,7 @@ char*  strncpy(char*, const char*, size_t);
 char*  strncat(char*, const char*, size_t);
 int    strncmp(const char*, const char*, size_t);
 int    strnicmp(const char*, const char*, size_t);
+
+#ifdef __cplusplus
+}
+#endif

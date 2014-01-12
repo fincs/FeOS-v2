@@ -1,6 +1,10 @@
 #pragma once
 #include "mailbox.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define MKVCTAG(type,idx) (((type)<<16) | (idx))
 
 enum
@@ -98,3 +102,7 @@ static inline void vcPropsFree(VCPROPS* pProps)
 {
 	free((void*)pProps->buffer);
 }
+
+#ifdef __cplusplus
+}
+#endif

@@ -1,6 +1,10 @@
 #pragma once
 #include "../feos.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 enum
 {
 	MBCHN_PM = 0,  // Power Management
@@ -16,3 +20,7 @@ enum
 };
 
 u32 mailboxExecCmd(int channel, u32 value);
+
+#ifdef __cplusplus
+}
+#endif

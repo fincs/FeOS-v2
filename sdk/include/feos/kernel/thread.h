@@ -1,5 +1,7 @@
 #pragma once
-#include "feos.h"
+#ifndef FEOS_INCLUDED
+#error "You must include <feos.h> first!"
+#endif
 
 #ifndef SCHEDULER_FREQ
 #define SCHEDULER_FREQ TIMER_HZ(100)

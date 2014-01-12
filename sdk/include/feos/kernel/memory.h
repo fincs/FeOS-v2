@@ -1,5 +1,7 @@
 #pragma once
-#include "feos.h"
+#ifndef FEOS_INCLUDED
+#error "You must include <feos.h> first!"
+#endif
 
 #define PHYSICAL_MEMORY ((u8*)0x80000000)
 #define PAGE_COLOUR(addr) (((u32)(addr) >> 12) & 3)

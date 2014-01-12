@@ -1,5 +1,7 @@
 #pragma once
-#include "feos.h"
+#ifndef FEOS_INCLUDED
+#error "You must include <feos.h> first!"
+#endif
 
 #ifndef MAX_ISR
 // Max # of ISRs per IRQ controller
