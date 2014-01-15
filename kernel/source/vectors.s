@@ -34,8 +34,8 @@ __SVCHandler:
 
 	@ Get address of target function
 	ldrb lr, [lr, #-2] @ syscall ID
-	ldr r12, =g_SyscallTablePtr
-	ldr r12, [r12]
+	ldr r12, =g_schedInfo+4 @ g_schedInfo.curProcess
+	ldr r12, [r12, #8] @ curProcess->svcTable
 	ldr r12, [r12, lr, lsl #2]
 
 	@ Restore IRQs and call target function

@@ -8,5 +8,3 @@
 #include "process.h"
 #include "thread.h"
 #include "memory.h"
-
-extern u32** g_SyscallTablePtr;

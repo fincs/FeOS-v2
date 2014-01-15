@@ -92,13 +92,13 @@ static inline void threadQueue_remove(threadInfo* t)
 struct tag_schedulerInfo
 {
 	spinlock_t lock;
+	processInfo* curProcess; // vectors.s depends on this field being at this offset
+	threadInfo* curThread;
 	threadQueue ready[16][2];
 	threadQueue finished[2];
 	threadQueue irqQueue;
 	int readyCount[2];
 	bool which;
-	processInfo* curProcess;
-	threadInfo* curThread;
 };
 
 void ThrInit(void);
