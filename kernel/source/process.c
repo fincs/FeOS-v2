@@ -40,8 +40,9 @@ processInfo* PsCreate(void)
 
 	p->refCount = 1;
 	p->asid = asid;
-	p->vmTable = (vu32*)(CpuGetLowerPT() &~ 0x1FFF);
 	p->svcTable = nullptr;
+	p->vmTable = (vu32*)safe_phys2virt(CpuGetLowerPT() &~ 0x1FFF);
+	SemaphoreInit(&p->vmMutex, 1);
 	psTable[asid] = p;
 	return p;
 }

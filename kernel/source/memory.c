@@ -10,7 +10,10 @@ typedef struct
 } buddyorder_t;
 
 static buddyorder_t orderinfo[MAX_ORDERS];
+// Physical memory management mutex
 static semaphore_t mmMutex = SEMAPHORE_STATIC_INIT(1);
+// Kernel L1 MMU table mutex
+static semaphore_t kvmMutex = SEMAPHORE_STATIC_INIT(1);
 
 static inline int _ToggleBit(int order, pageinfo_t* page)
 {
@@ -176,6 +179,22 @@ static inline bool _IsKernel(void* addr)
 	return (u32)addr >= 0x80000000;
 }
 
+static inline vu32* _GetVMTable(void* addr, semaphore_t** ppSem)
+{
+	if (_IsKernel(addr))
+	{
+		if (ppSem)
+			*ppSem = &kvmMutex;
+		return MASTER_PAGETABLE;
+	} else
+	{
+		processInfo* ps = ThrSchedInfo()->curProcess;
+		if (ppSem)
+			*ppSem = &ps->vmMutex;
+		return ps->vmTable;
+	}
+}
+
 static vu32* _GetCoarseTable(void* vaddr, bool bCreate, vu32** ppL1Entry)
 {
 	int i;
@@ -188,20 +207,22 @@ static vu32* _GetCoarseTable(void* vaddr, bool bCreate, vu32** ppL1Entry)
 	if (isK && (idx == L1_INDEX(0xfff00000) || idx == L1_INDEX(0xe0000000)))
 		return nullptr; // Can't touch that memory region! (Kernel code and system vectors)
 
-	vu32* entry = (isK ? MASTER_PAGETABLE : (vu32*)safe_phys2virt(CpuGetLowerPT() &~ 0x1F)) + idx;
-	vu32* coarse;
+	semaphore_t* sem = nullptr;
+	vu32* entry = _GetVMTable(vaddr,&sem) + idx;
+	vu32* coarse = nullptr;
 
+	SemaphoreDown(sem);
 	switch (*entry & 3)
 	{
 		case 0:
 		{
 			// This 1MB section has no associated course table
 			if (!bCreate)
-				return nullptr; // We are not allowed to create it
+				break; // We are not allowed to create it
 
 			pageinfo_t* pCoarsePage = MemAllocPage(PAGEORDER_4K);
 			if (!pCoarsePage)
-				return nullptr; // Out of memory
+				break; // Out of memory
 
 			pCoarsePage->refCount = 1;
 			pCoarsePage->flags = 0;
@@ -220,10 +241,12 @@ static vu32* _GetCoarseTable(void* vaddr, bool bCreate, vu32** ppL1Entry)
 			break;
 		default:
 			// Unsupported and/or unmappable section
-			return nullptr;
+			break;
 	}
-	if (ppL1Entry)
+	if (coarse && ppL1Entry)
 		*ppL1Entry = entry;
+
+	SemaphoreUp(sem);
 	return coarse;
 }
 
@@ -371,7 +394,7 @@ bool MemUnmapPage(void* vaddr)
 u32 MemTranslateAddr(void* address)
 {
 	u32 vaddr = (u32)address;
-	u32 L1entry = (_IsKernel(address) ? MASTER_PAGETABLE : (vu32*)phys2virt(CpuGetLowerPT() &~ 0x1F))[L1_INDEX(vaddr)];
+	u32 L1entry = _GetVMTable(address, nullptr)[L1_INDEX(vaddr)];
 	switch (L1entry & 3)
 	{
 		case MMU_L1_COARSE:
