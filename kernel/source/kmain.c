@@ -103,8 +103,13 @@ int kmain(u32 memSize)
 	heaptest();
 	vspacetest();
 
+	void DevInit();
+	void DevTest();
+	DevInit();
+	DevTest();
+
 	kputs("<irqtest> Installing Timer ISR...\n");
-	int timer = timerStart(TIMER_HZ(60), nullptr); //myTimerIsr);
+	int timer = timerStart(TIMER_HZ(1 /*60*/), nullptr); //myTimerIsr);
 	
 	kputs("<kmain> entering idle loop\n");
 	SemaphoreInit(&mySem, 1);
