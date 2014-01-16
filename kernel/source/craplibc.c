@@ -23,3 +23,33 @@ int strlen(const char* buf)
 	for (; *buf++; i ++);
 	return i;
 }
+
+int strnicmp(const char* a, const char* b, unsigned int maxlen)
+{
+	unsigned int pos;
+	for (pos = 0; pos < maxlen; pos ++)
+	{
+		int ca = *a++, cb = *b++;
+		if (!ca && !cb)
+			break;
+		if (ca >= 'a' && ca <= 'z') ca += 'A' - 'a';
+		if (cb >= 'a' && cb <= 'z') cb += 'A' - 'a';
+		if (ca != cb)
+			return ca-cb;
+	}
+	return 0;
+}
+
+char* strncpy(char* dst, const char* src, unsigned int maxlen)
+{
+	char* ret = dst;
+	unsigned int pos;
+	for (pos = 0; pos < maxlen; pos ++)
+	{
+		int c = *src++;
+		*dst++ = c;
+		if (!c)
+			break;
+	}
+	return ret;
+}
