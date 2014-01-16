@@ -30,8 +30,10 @@ struct DriverFuncs
 
 extern "C"
 {
-	devCookie DevRegister(KDevice* dev, const char* devName); // devName is used for standard device types
+	devCookie DevRegister(KDevice* dev, const char* baseName = nullptr);
 	void DevUnregister(devCookie cookie);
+
+	KDevice* DevGet(const char* baseName, int id);
 
 	fsrootCookie FSRootRegister(IFSRoot* fsroot, const char* fsrootName);
 	void FSRootUnregister(IFSRoot* fsroot);
