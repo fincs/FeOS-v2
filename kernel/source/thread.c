@@ -10,6 +10,7 @@ static threadInfo* ThrCreateInfo(int prio)
 	threadInfo* t = (threadInfo*) malloc(sizeof(threadInfo));
 	if (!t) return nullptr;
 	t->sched = ThrSchedInfo();
+	t->process = t->sched->curProcess;
 	t->flags = 0;
 	t->prio = prio;
 	t->quantum = SCHEDULER_RR_DEFAULT_Q;
