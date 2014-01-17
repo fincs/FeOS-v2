@@ -3,6 +3,8 @@
 #error "You must include <dmodel.h> first!"
 #endif
 
+extern "C" word_t g_defModUsageRefCnt;
+
 template <int devType, word_t& usageCount>
 class KDeviceImpl : public KDevice
 {

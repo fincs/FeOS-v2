@@ -38,4 +38,6 @@ extern "C"
 
 	fsrootCookie FSRootRegister(IFSRoot* fsroot, const char* fsrootName);
 	void FSRootUnregister(IFSRoot* fsroot);
+
+	bool DefModCanUnload();
 }

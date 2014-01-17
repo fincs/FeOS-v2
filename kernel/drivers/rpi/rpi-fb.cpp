@@ -1,9 +1,7 @@
 #include "common.h"
 #include <rpi/vcprops.h>
 
-word_t g_rpiFbCnt;
-
-class RPiFbDrv : public KFramebufferImpl<g_rpiFbCnt>
+class RPiFbDrv : public KFramebufferImpl
 {
 	FbDevInfo m_info;
 	void* m_buf;
@@ -117,11 +115,6 @@ static int ModuleAttach()
 	return fb ? 0 : -ENOMEM;
 }
 
-static bool ModuleCanUnload()
-{
-	return g_rpiFbCnt == 0;
-}
-
 static void ModuleDetach()
 {
 	if (regCookie)
@@ -131,6 +124,6 @@ static void ModuleDetach()
 FEOS_EXPORTMODULE(RPiFramebuffer)
 {
 	.Attach = ModuleAttach,
-	.CanUnload = ModuleCanUnload,
+	.CanUnload = DefModCanUnload,
 	.Detach = ModuleDetach,
 };

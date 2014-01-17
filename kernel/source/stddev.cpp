@@ -1,8 +1,11 @@
 #include "common.h"
 
-word_t g_stdDevRefCnt;
+bool DefModCanUnload()
+{
+	return g_defModUsageRefCnt == 0;
+}
 
-class KIODriver : public KStreamImpl<g_stdDevRefCnt>
+class KIODriver : public KStreamImpl
 {
 	StrmDevStat m_stat;
 public:

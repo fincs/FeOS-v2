@@ -46,7 +46,8 @@ private:
 };
 
 template <word_t& usageCount>
-using KStreamImpl = KDeviceImpl<DevType_Stream, usageCount>;
+using KStreamImplMod = KDeviceImpl<DevType_Stream, usageCount>;
+using KStreamImpl = KStreamImplMod<g_defModUsageRefCnt>;
 
 #define KSTRMCMDMAP_GetStat(method) \
 		case StrmCmd_GetStat: \

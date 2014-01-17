@@ -21,7 +21,8 @@ private:
 };
 
 template <word_t& usageCount>
-using KFramebufferImpl = KDeviceImpl<DevType_Framebuffer, usageCount>;
+using KFramebufferImplMod = KDeviceImpl<DevType_Framebuffer, usageCount>;
+using KFramebufferImpl = KFramebufferImplMod<g_defModUsageRefCnt>;
 
 #define KFBCMDMAP_GetInfo(method) \
 		case FbCmd_GetInfo: \
