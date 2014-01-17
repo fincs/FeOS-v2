@@ -46,21 +46,18 @@ void DevInit()
 		DevRegister(kio);
 		kio->Release();
 	}
+
+	LINK_MODULE(ConsoleDrv);
+}
+
+static inline intptr_t KStrmPrint(KStream* strm, const char* buf)
+{
+	return strm->Write(buf, strlen(buf));
 }
 
 void DevTest()
 {
-	KStream* strm = KStream::From(DevGet("strm", 0));
-	if (!strm)
-	{
-		kputs("<DevTest> Can't get strm0 device!\n");
-		return;
-	}
-
-	strm->Write("Works!", 6);
-	strm->Release();
-
-	KFramebuffer* fb = KFramebuffer::From(DevGet("fb", 0));
+	KFramebuffer* fb = KFramebuffer::From(DevGet("fb"));
 	if (fb)
 	{
 		FbDevInfo info = { sizeof(FbDevInfo) };
@@ -84,5 +81,17 @@ void DevTest()
 			}
 		}
 		fb->Release();
+	}
+
+	KStream* con = KStream::From(DevGet("con"));
+	if (con)
+	{
+		kputs("Got console device\n");
+		KStrmPrint(con, "FeOS/RPi Console Demo\n");
+		KStrmPrint(con, "Hello World!\n");
+		KStrmPrint(con, "Te\tst\tting tabs\n\n");
+		KStrmPrint(con, "\tHello World #FeOS\n");
+		KStrmPrint(con, "\thttp://feos.mtheall.com\n");
+		con->Release();
 	}
 }
