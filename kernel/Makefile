@@ -31,7 +31,7 @@ else
 TARGET   := FeOSd.$(FEOSPLAT)
 BUILD    := build_dbg.$(FEOSPLAT)
 endif
-SOURCES  := source source/$(FEOSPLAT)
+SOURCES  := source source/$(FEOSPLAT) drivers/$(FEOSPLAT)
 INCLUDES := ../sdk/include/feos/kernel
 DATA     := data data/$(FEOSPLAT)
 
@@ -123,7 +123,8 @@ export OFILES := $(addsuffix .o,$(BINFILES)) \
 
 export INCLUDE := $(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) \
                   $(foreach dir,$(LIBDIRS),-I$(dir)/include) \
-                  -I$(CURDIR)/$(BUILD)
+                  -I$(CURDIR)/$(BUILD) \
+                  -iquote $(CURDIR)/source
 
 export LIBPATHS := $(foreach dir,$(LIBDIRS),-L$(dir)/lib)
 
