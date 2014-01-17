@@ -11,6 +11,7 @@
 #include "dmodel/fsroot.h"
 #include "dmodel/dimpl.h"
 #include "dmodel/stream.h"
+#include "dmodel/framebuffer.h"
 
 typedef struct tag_devCookie* devCookie;
 typedef struct tag_fsrootCookie* fsrootCookie;

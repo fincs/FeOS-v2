@@ -42,6 +42,12 @@ public:
 	}
 };
 
+template <typename T>
+static inline intptr_t DevGetMem(KDevice* dev, T*& mem, size_t& memSize)
+{
+	return dev->Command(DevCmd_GetMem, (intptr_t)&mem, (intptr_t)&memSize);
+}
+
 #define KDEVCMDMAP_DECLARE() \
 	intptr_t Command(int cmdId, intptr_t arg1, intptr_t arg2)
 
