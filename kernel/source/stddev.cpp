@@ -56,4 +56,30 @@ void DevTest()
 
 	strm->Write("Works!", 6);
 	strm->Release();
+
+	KFramebuffer* fb = KFramebuffer::From(DevGet("fb", 0));
+	if (fb)
+	{
+		FbDevInfo info = { sizeof(FbDevInfo) };
+		if (fb->GetInfo(info) >= 0 && info.bitDepth == 16)
+		{
+			u16* buf;
+			size_t bufSize;
+			if (DevGetMem(fb, buf, bufSize) >= 0)
+			{
+				kprintf("Got FB: %p\n", buf);
+				int i, j;
+				u16* line = buf;
+				for (j = 0; j < (int)info.height; j ++)
+				{
+					for (i = 0; i < (int)info.width; i ++)
+					{
+						line[i] = (i*j)&0xFFFF;
+					}
+					line = (u16*)((char*)line + info.stride);
+				}
+			}
+		}
+		fb->Release();
+	}
 }
