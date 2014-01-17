@@ -32,6 +32,11 @@ struct DevKind
 		return (KDevice*)DynArray_Get(&arr, i);
 	}
 
+	int maxDevices()
+	{
+		return firstFreePos;
+	}
+
 	int addDevice(KDevice* dev);
 	void removeDevice(int i);
 
@@ -157,7 +162,11 @@ KDevice* DevGet(const char* baseName, int id)
 	DevKind* k = GetDeviceKind(baseName);
 	if (!k) return nullptr;
 
-	KDevice* dev = k->getDevice(id);
+	KDevice* dev = nullptr;
+	if (id >= 0)
+		dev = k->getDevice(id);
+	else for (id = 0; !dev && id < k->maxDevices(); id ++)
+		dev = k->getDevice(id);
 	if (dev)
 		dev->AddRef();
 	return dev;

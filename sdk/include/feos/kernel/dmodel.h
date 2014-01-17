@@ -34,7 +34,7 @@ extern "C"
 	devCookie DevRegister(KDevice* dev, const char* baseName = nullptr);
 	void DevUnregister(devCookie cookie);
 
-	KDevice* DevGet(const char* baseName, int id);
+	KDevice* DevGet(const char* baseName, int id = -1);
 
 	fsrootCookie FSRootRegister(IFSRoot* fsroot, const char* fsrootName);
 	void FSRootUnregister(IFSRoot* fsroot);
