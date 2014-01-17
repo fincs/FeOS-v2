@@ -97,15 +97,12 @@ int kmain(u32 memSize)
 	irqInit();
 	timerInit();
 	ThrInit();
+	DevInit();
 
 	memtest();
 	maptest();
 	heaptest();
 	vspacetest();
-
-	void DevInit();
-	void DevTest();
-	DevInit();
 	DevTest();
 
 	kputs("<irqtest> Installing Timer ISR...\n");

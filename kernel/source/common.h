@@ -12,3 +12,4 @@
 #ifdef __cplusplus
 #include <dmodel.h>
 #endif
+#include "devices.h"

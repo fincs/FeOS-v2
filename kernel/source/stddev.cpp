@@ -33,8 +33,10 @@ KDEVCMDMAP_BEGIN(KIODriver)
 	KSTRMCMDMAP_Write(Write)
 KDEVCMDMAP_END()
 
-extern "C" void DevInit()
+void DevInit()
 {
+	DevInitPlatform();
+
 	KIODriver* kio = new KIODriver;
 	if (kio)
 	{
@@ -43,7 +45,7 @@ extern "C" void DevInit()
 	}
 }
 
-extern "C" void DevTest()
+void DevTest()
 {
 	KStream* strm = KStream::From(DevGet("strm", 0));
 	if (!strm)
