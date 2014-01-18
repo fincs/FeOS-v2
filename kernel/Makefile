@@ -51,7 +51,7 @@ endif
 
 ARCH := -mthumb-interwork -mcpu=$(CPU) -mtune=$(CPU) -mfpu=vfp -mfloat-abi=hard
 
-DEFINES	 := -DFEOS -DFEOS_KERNEL -DFEOS_$(FEOSPLAT) -DFEOS_PLATINCLUDE=\"$(FEOSPLAT)/platform.h\"
+DEFINES	 := -DFEOS -DFEOS_KERNEL -DFEOS_$(FEOSPLAT) -DFEOS_PLAT=\"$(FEOSPLAT)\" -DFEOS_PLATINCLUDE=\"$(FEOSPLAT)/platform.h\"
 ifeq ($(DEBUGVER),)
 COPTFLAG :=	-O2
 DEFINES  += -DNDEBUG
