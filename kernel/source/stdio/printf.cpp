@@ -59,9 +59,13 @@ int vfprintf(FILE* f, const char* fmt, va_list va)
 	while (ret >= 0)
 	{
 		for (last = fmt; *fmt && *fmt != '%'; fmt++);
-		size_t size = fwrite(last, 1, fmt - last, f);
-		if (!size) return -1;
-		ret += (int)size;
+		size_t wantSize = fmt - last;
+		if (wantSize)
+		{
+			size_t size = fwrite(last, 1, wantSize, f);
+			if (size != wantSize) return -1;
+			ret += (int)size;
+		}
 		if (!*fmt) break;
 		int code = fmt[1]; fmt += 2;
 #define HANDLE(x) do { int d = (x); ret = (d>=0) ? (ret+d) : -1; } while(0)
