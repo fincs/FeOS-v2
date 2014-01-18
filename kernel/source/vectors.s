@@ -94,8 +94,8 @@ __PABTHandler:
 
 __DABTHandler:
 	push {r0}
-	mov r0, #2
 	sub lr, #8 @ adjust saved PC
+	mov r0, #2
 
 __ExcptHandler:
 	push {r12}
@@ -103,13 +103,21 @@ __ExcptHandler:
 	tst r12, #(1<<15) @ test for T bit
 	pop {r12}
 
-	@HALT
-	push {r1-r3}
-	mov r1, lr
-	ldr r3, =WhateverExcpt
-	blx r3
-	pop {r1-r3}
+	sub sp, #14*4
+	stm sp, {r0-r12,lr}
+	ldr r12, [sp, #14*4] @ grab original r0
+	str r12, [sp] @ save it in the right position
+	mrs r12, spsr
+	str r12, [sp, #14*4] @ save spsr
 
-	@ EEEEE Return
-	pop {r0}
+	@ Call exception handler
+	mov r1, sp
+	ldr r3, =KeExcptHandler
+	blx r3
+
+	@ Restore registers & return
+	ldr r3, [sp, #14*4]
+	msr spsr, r3
+	ldm sp, {r0-r12,lr}
+	add sp, #15*4
 	movs pc, lr

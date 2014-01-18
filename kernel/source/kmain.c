@@ -76,21 +76,6 @@ void contest()
 	printf("\thttp://feos.mtheall.com\n");
 }
 
-void WhateverExcpt(int type, u32 addr)
-{
-	kprintf("\nEXCEPTION %d AT %p\n", type, addr);
-
-	u32 mySp, myLr;
-	CpuSaveModeRegs(CPSR_MODE_IRQ, &mySp, &myLr);
-	kprintf("IRQ SP: %x LR: %x\n", mySp, myLr);
-	CpuSaveModeRegs(CPSR_MODE_SVC, &mySp, &myLr);
-	kprintf("SVC SP: %x LR: %x\n", mySp, myLr);
-	CpuSaveModeRegs(CPSR_MODE_USR, &mySp, &myLr);
-	kprintf("USR SP: %x LR: %x\n", mySp, myLr);
-
-	for(;;);
-}
-
 semaphore_t mySem;
 
 int kmain(u32 memSize)
