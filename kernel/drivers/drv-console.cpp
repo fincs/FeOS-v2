@@ -7,6 +7,8 @@ class ConsoleDrv : public KStreamImpl
 	KFramebuffer* m_fb;
 	FbDevInfo m_fbInfo;
 
+	semaphore_t conMutex;
+
 	u8* m_conFb;
 	int m_conW, m_conH;
 	int m_conX, m_conY;
@@ -21,6 +23,7 @@ public:
 		m_stat.flags = StrmDev_Writable;
 		m_stat.size = 0; // don't care
 		m_fbInfo.structSize = sizeof(m_fbInfo);
+		SemaphoreInit(&conMutex, 1);
 	}
 
 	~ConsoleDrv()
@@ -78,6 +81,7 @@ intptr_t ConsoleDrv::Write(const void* buffer, size_t bufSize)
 {
 	const char* buf = (const char*)buffer;
 	const char* bufEnd = buf + bufSize;
+	SemaphoreDown(&conMutex);
 	while (buf != bufEnd)
 	{
 		int c = *buf++;
@@ -95,6 +99,7 @@ intptr_t ConsoleDrv::Write(const void* buffer, size_t bufSize)
 				newline();
 		}
 	}
+	SemaphoreUp(&conMutex);
 	return bufSize;
 }
 
@@ -106,8 +111,8 @@ void ConsoleDrv::newline()
 	{
 		m_conY --;
 		int stride = m_fbInfo.stride;
-		memcpy(m_conFb, m_conFb + FONT_CHARH*stride, (m_conH-1)*stride);
-		memset(m_conFb + m_conY*stride, 0, stride);
+		memcpy(m_conFb, m_conFb + FONT_CHARH*stride, (m_conH-1)*FONT_CHARH*stride);
+		memset(m_conFb + m_conY*FONT_CHARH*stride, 0, FONT_CHARH*stride);
 	}
 }
 
