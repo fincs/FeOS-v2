@@ -31,7 +31,7 @@ else
 TARGET   := FeOSd.$(FEOSPLAT)
 BUILD    := build_dbg.$(FEOSPLAT)
 endif
-SOURCES  := source source/$(FEOSPLAT) drivers drivers/$(FEOSPLAT)
+SOURCES  := source source/$(FEOSPLAT) drivers drivers/$(FEOSPLAT) source/stdio
 INCLUDES := ../sdk/include/feos/kernel
 DATA     := data data/$(FEOSPLAT)
 

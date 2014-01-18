@@ -14,7 +14,8 @@ extern "C" {
 
 void DevInit();
 void DevInitPlatform(); // implemented by HAL
-void DevTest();
+
+void IoInit();
 
 #ifdef __cplusplus
 }

@@ -1,5 +1,6 @@
 #pragma once
 #define FEOS_INCLUDED
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "intrinsics.h"
