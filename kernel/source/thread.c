@@ -3,6 +3,7 @@
 static void ThrTimerISR(u32* regs);
 static int thrTimerId;
 
+static int ThrWakeUpIRQ(schedulerInfo* sched);
 static threadInfo* ThrScheduler(schedulerInfo* sched, bool isPreempt);
 
 static threadInfo* ThrCreateInfo(int prio)
@@ -173,10 +174,13 @@ void ThrTimerISR(u32* regs)
 		return; // already scheduling
 
 	threadInfo* curT = sched->curThread;
-	if (IS_FIFO_PRIO(curT->prio))
-		return;
-	if ((--curT->quantum) > 0)
-		return; // still have enough quantum
+	if (ThrWakeUpIRQ(sched) <= curT->prio)
+	{
+		if (IS_FIFO_PRIO(curT->prio))
+			return;
+		if ((--curT->quantum) > 0)
+			return; // still have enough quantum
+	}
 
 	threadInfo* nextT = ThrScheduler(sched, true);
 	if (!nextT)
@@ -201,22 +205,24 @@ void ThrTimerISR(u32* regs)
 	CpuSyncBarrier();
 }
 
-threadInfo* ThrScheduler(schedulerInfo* sched, bool isPreempt)
+int ThrWakeUpIRQ(schedulerInfo* sched)
 {
+	int i, maxPrio = -1;
 	threadInfo *t, *tN;
-	int i;
 
 	u32 irqMasks[MAX_IRQCTRL];
 	for (i = 0; i < MAX_IRQCTRL; i ++)
 		irqMasks[i] = irqFlags(i);
 
-	// Wake up IRQ wait threads
+	// Wake up IRQ wait threads.
 	for (t = sched->irqQueue.first; t; t = tN)
 	{
 		tN = t->next;
 		if (irqMasks[t->irqCtrl] & t->irqMask)
 		{
 			t->flags &= ~THRFLAG_BLOCKED;
+			if (t->prio > maxPrio)
+				maxPrio = t->prio;
 			threadQueue_remove(t);
 			threadQueue_add(&sched->ready[t->prio][sched->which], t);
 			t->quantum = SCHEDULER_RR_DEFAULT_Q;
@@ -224,13 +230,24 @@ threadInfo* ThrScheduler(schedulerInfo* sched, bool isPreempt)
 		}
 	}
 
+	return maxPrio;
+}
+
+threadInfo* ThrScheduler(schedulerInfo* sched, bool isPreempt)
+{
+	threadInfo* t;
+	int i;
+
+	if (!isPreempt) // otherwise already done
+		ThrWakeUpIRQ(sched);
+
 	if (!sched->readyCount[sched->which])
 	{
 		sched->which = !sched->which;
 		if (!sched->readyCount[sched->which])
 		{
-			// No thread exists?!?!
-			// =Deadlock
+			// No thread can be executed
+			// =Deadlock if there aren't IRQ waiting threads
 			return nullptr;
 		}
 	}
