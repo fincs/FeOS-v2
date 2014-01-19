@@ -163,6 +163,16 @@ void ThrWaitForIRQ(int ctrlId, u32 mask)
 	ThrYield();
 }
 
+void ThrSleep(int ms)
+{
+	schedulerInfo* sched = ThrSchedInfo();
+	u32 schedPeriod = 1000/(SCHEDULER_FREQ>>12);
+	u32 target = sched->tickCount + ((u32)ms+schedPeriod-1) / schedPeriod;
+	
+	while (sched->tickCount < target)
+		timerWaitForIRQ(thrTimerId);
+}
+
 void ThrTimerISR(u32* regs)
 {
 	u32 spsr = regs[16];
@@ -170,6 +180,8 @@ void ThrTimerISR(u32* regs)
 		return; // Do not disturb other modes
 
 	schedulerInfo* sched = ThrSchedInfo();
+	sched->tickCount ++;
+
 	if (sched->lock)
 		return; // already scheduling
 

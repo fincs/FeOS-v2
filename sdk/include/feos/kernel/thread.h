@@ -62,6 +62,8 @@ void ThrYield(void);
 void __attribute__((noreturn)) ThrExit(int exitCode);
 void ThrWaitForIRQ(int ctrlId, u32 mask);
 
+void ThrSleep(int ms); // NOT to be used for accurate timing!
+
 typedef struct
 {
 	vu32 counter;

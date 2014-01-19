@@ -99,6 +99,7 @@ struct tag_schedulerInfo
 	threadQueue irqQueue;
 	int readyCount[2];
 	bool which;
+	vu32 tickCount;
 };
 
 void ThrInit(void);
