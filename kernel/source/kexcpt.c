@@ -38,10 +38,10 @@ static const char* getModeName(int mode)
 
 void KeExcptHandler(int type, excptArgs_t* args)
 {
-	word_t excptPc = args->pc;
 	word_t cpsr = args->cpsr;
 	if (type == Excpt_UndInstr)
 		args->pc -= (cpsr & BIT(5)) ? 2 : 4;
+	word_t excptPc = args->pc;
 
 	int mode = cpsr&0xF;
 	const char* modeName = getModeName(mode);
