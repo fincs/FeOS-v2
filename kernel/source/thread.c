@@ -49,45 +49,36 @@ void ThrExit(int exitCode)
 	for(;;); // shouldn't reach
 }
 
-static int ThrTestMain(const char* str)
+threadInfo* ThrCreateK(ThrEntrypoint ep, void* userParam, int prio, size_t stackSize)
 {
-	extern semaphore_t mySem;
+	void* stack = malloc(stackSize);
+	if (!stack)
+		return nullptr;
 
-	kprintf("<ThrTestMain> I was given %s\nWoohoo!\n", str);
-
-	int i;
-	SemaphoreDown(&mySem);
-	for (i = 0; i < 64; i ++)
+	threadInfo* t = ThrCreateInfo(prio);
+	if (!t)
 	{
-		kputc('R');
-		timerWaitForIRQ(thrTimerId);
+		free(stack);
+		return nullptr;
 	}
-	SemaphoreUp(&mySem);
 
-	return 0;
-}
-
-void ThrTestCreate(void)
-{
-	static u32 buf[1024];
-
-	schedulerInfo* sched = ThrSchedInfo();
-
-	threadInfo* t = ThrCreateInfo(5);
-	t->ctx.r[0] = (u32)"Hello world!";
-	t->ctx.r[15] = (u32)ThrTestMain;
+	t->ctx.r[0] = (u32)userParam;
+	t->ctx.r[15] = (u32)ep;
 	t->ctx.cpsr = 0x10 | CPSR_MODE_SVC;
-	t->ctx.svcSp = (u32)(buf + 1024);
+	t->ctx.svcSp = (u32)stack + stackSize;
 	t->ctx.svcLr = (u32)ThrExit;
 
+	schedulerInfo* sched = ThrSchedInfo();
 	SpinlockAcquire(&sched->lock);
 	threadQueue_add(&sched->ready[t->prio][sched->which], t);
 	sched->readyCount[sched->which] ++;
 	bool bNeedYield = t->prio > sched->curThread->prio;
 	SpinlockRelease(&sched->lock);
-	kputs("Added thread!\n");
+
 	if (bNeedYield)
 		ThrYield();
+
+	return t;
 }
 
 void ThrYield(void)

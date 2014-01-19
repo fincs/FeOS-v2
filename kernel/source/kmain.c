@@ -1,6 +1,6 @@
 #include "common.h"
 
-void memtest()
+static void memtest()
 {
 	pageinfo_t* p1 = MemAllocPage(PAGEORDER_4K);
 	pageinfo_t* p2 = MemAllocPage(PAGEORDER_8K);
@@ -14,7 +14,7 @@ void memtest()
 	MemFreePage(p3, PAGEORDER_1M);
 }
 
-void maptest()
+static void maptest()
 {
 	vu32* mem1 = (vu32*)MemMapPage((void*)0x02000000, PAGE_W);
 	vu32* mem2 = (vu32*)MemMapPage((void*)0xC0100000, PAGE_W | PAGE_X);
@@ -40,7 +40,7 @@ void maptest()
 	MemUnmapPage((void*)mem2);
 }
 
-void heaptest()
+static void heaptest()
 {
 	void* mem1 = malloc(124);
 	void* mem2 = memalign(32, 35661);
@@ -51,7 +51,7 @@ void heaptest()
 	malloc_trim(0);
 }
 
-void vspacetest()
+static void vspacetest()
 {
 	HVSPACE h = vspace_create((void*)0xC0000000, 0x20000000);
 	HVSPACE sp1 = vspace_alloc(h, 1234);
@@ -67,7 +67,7 @@ void vspacetest()
 	vspace_freeAll(h);
 }
 
-void contest()
+static void contest()
 {
 	printf("FeOS/RPi Console Demo\n");
 	printf("Hello World!\n");
@@ -76,7 +76,43 @@ void contest()
 	printf("\thttp://feos.mtheall.com\n");
 }
 
-semaphore_t mySem;
+//static semaphore_t mySem;
+
+static int threadEnt(void* param)
+{
+	const char* str = (const char*)param;
+	printf("<ThrTestMain> I was given %s\nWoohoo!\n", str);
+
+	int i;
+	//SemaphoreDown(&mySem);
+	for (i = 0; i < 128; i ++)
+	{
+		printf("[%d]", i);
+		ThrSleep(50);
+	}
+	//SemaphoreUp(&mySem);
+
+	return 0;
+}
+
+static void thrtest()
+{
+	//SemaphoreInit(&mySem, 1);
+	threadInfo* t = ThrCreateK(threadEnt, "Hello world!", 5, DEFAULT_STACKSIZE);
+	if (!t)
+		printf("<thrtest> Could not create thread!\n");
+
+	//SemaphoreDown(&mySem);
+
+	int i;
+	for (i = 0; /*i < 64*/; i ++)
+	{
+		printf("<%d>", i);
+		ThrSleep(250);
+	}
+
+	//SemaphoreUp(&mySem);
+}
 
 int kmain(u32 memSize)
 {
@@ -98,24 +134,9 @@ int kmain(u32 memSize)
 	heaptest();
 	vspacetest();
 	contest();
+	thrtest();
 
-	printf("<irqtest> Installing Timer ISR...\n");
-	int timer = timerStart(TIMER_HZ(4 /*60*/), nullptr);
-	
 	printf("<kmain> entering idle loop\n");
-	SemaphoreInit(&mySem, 1);
-	ThrTestCreate();
-
-	SemaphoreDown(&mySem);
-
-	int i;
-	for (i = 0; /*i < 64*/; i ++)
-	{
-		printf("Timer %d | ", i);
-		timerWaitForIRQ(timer);
-	}
-
-	SemaphoreUp(&mySem);
 
 	for (;;)
 		ThrWaitForIRQ(0, 0);

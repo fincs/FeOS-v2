@@ -57,7 +57,10 @@ struct tag_threadQueue
 #define IS_FIFO_PRIO(n) ((n) >= 12)
 #define IS_STATICRR_PRIO(n) ((n) >= 8)
 
-void ThrTestCreate(void);
+typedef int (* ThrEntrypoint)(void*);
+#define DEFAULT_STACKSIZE 8192
+
+threadInfo* ThrCreateK(ThrEntrypoint ep, void* userParam, int prio, size_t stackSize);
 void ThrYield(void);
 void __attribute__((noreturn)) ThrExit(int exitCode);
 void ThrWaitForIRQ(int ctrlId, u32 mask);
