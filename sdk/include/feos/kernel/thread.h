@@ -84,3 +84,8 @@ static inline void SemaphoreInit(semaphore_t* s, int counter)
 
 void SemaphoreDown(semaphore_t* s);
 void SemaphoreUp(semaphore_t* s);
+
+static inline bool isIrqMode()
+{
+	return CPSR_MODE(CpuGetCPSR()) == CPSR_MODE_IRQ;
+}

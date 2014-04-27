@@ -6,6 +6,9 @@ static int thrTimerId;
 static int ThrWakeUpIRQ(schedulerInfo* sched);
 static threadInfo* ThrScheduler(schedulerInfo* sched, bool isPreempt);
 
+#define SCHED_LOCK(_sched) bool _oldIrq = irqSuspend(); SpinlockAcquire(&(_sched)->lock)
+#define SCHED_UNLOCK(_sched) SpinlockRelease(&(_sched)->lock); irqRestore(_oldIrq)
+
 static threadInfo* ThrCreateInfo(int prio)
 {
 	threadInfo* t = (threadInfo*) malloc(sizeof(threadInfo));
@@ -34,7 +37,7 @@ void ThrInit(void)
 void ThrExit(int exitCode)
 {
 	schedulerInfo* sched = ThrSchedInfo();
-	SpinlockAcquire(&sched->lock);
+	SCHED_LOCK(sched);
 	threadInfo* t = sched->curThread;
 	if (t->flags & THRFLAG_CRITICAL)
 	{
@@ -44,7 +47,7 @@ void ThrExit(int exitCode)
 	t->flags |= THRFLAG_FINISHED;
 	t->exitCode = exitCode;
 	threadQueue_add(&sched->finished[!!(t->flags & THRFLAG_DETACHED)], t);
-	SpinlockRelease(&sched->lock);
+	SCHED_UNLOCK(sched);
 	ThrYield();
 	for(;;); // shouldn't reach
 }
@@ -69,11 +72,11 @@ threadInfo* ThrCreateK(ThrEntrypoint ep, void* userParam, int prio, size_t stack
 	t->ctx.svcLr = (u32)ThrExit;
 
 	schedulerInfo* sched = ThrSchedInfo();
-	SpinlockAcquire(&sched->lock);
+	SCHED_LOCK(sched);
 	threadQueue_add(&sched->ready[t->prio][sched->which], t);
 	sched->readyCount[sched->which] ++;
 	bool bNeedYield = t->prio > sched->curThread->prio;
-	SpinlockRelease(&sched->lock);
+	SCHED_UNLOCK(sched);
 
 	if (bNeedYield)
 		ThrYield();
@@ -87,7 +90,7 @@ void ThrYield(void)
 		return;
 
 	schedulerInfo* sched = ThrSchedInfo();
-	SpinlockAcquire(&sched->lock);
+	SCHED_LOCK(sched);
 
 	threadInfo* curT = sched->curThread;
 	threadInfo* nextT;
@@ -99,7 +102,7 @@ void ThrYield(void)
 		if (!nextT)
 		{
 			// No thread to run - oops sorry :p
-			SpinlockRelease(&sched->lock);
+			SCHED_UNLOCK(sched);
 			return;
 		}
 	} else
@@ -108,11 +111,13 @@ void ThrYield(void)
 		{
 			nextT = ThrScheduler(sched, false);
 			if (nextT) break;
+			CpuIrqEnable();
 			CpuIdle();
+			CpuIrqDisable();
 		}
 		if (nextT == curT)
 		{
-			SpinlockRelease(&sched->lock);
+			SCHED_UNLOCK(sched);
 			return;
 		}
 	}
@@ -125,7 +130,7 @@ void ThrYield(void)
 		curT->quantum = SCHEDULER_RR_DEFAULT_Q;
 	}
 
-	CpuIrqDisable();
+	//CpuIrqDisable(); // already done by SCHED_LOCK()
 	SpinlockRelease(&sched->lock);
 
 	// Perform process context switch
@@ -147,13 +152,13 @@ void ThrYield(void)
 void ThrWaitForIRQ(int ctrlId, u32 mask)
 {
 	schedulerInfo* sched = ThrSchedInfo();
-	SpinlockAcquire(&sched->lock);
+	SCHED_LOCK(sched);
 	threadInfo* curT = sched->curThread;
 	curT->irqCtrl = ctrlId;
 	curT->irqMask = mask;
 	curT->flags |= THRFLAG_BLOCKED;
 	threadQueue_add(&sched->irqQueue, curT);
-	SpinlockRelease(&sched->lock);
+	SCHED_UNLOCK(sched);
 	ThrYield();
 }
 
@@ -176,8 +181,11 @@ void ThrTimerISR(u32* regs)
 	schedulerInfo* sched = ThrSchedInfo();
 	sched->tickCount ++;
 
+	// Check the scheduler lock - if it is held it is because either of two reasons:
+	// - ThrYield() has been called and it's in the middle of an IRQ wait.
+	// - Another CPU is messing with our scheduler data (SMP, not implemented yet)
 	if (sched->lock)
-		return; // already scheduling
+		return;
 
 	threadInfo* curT = sched->curThread;
 	if (ThrWakeUpIRQ(sched) <= curT->prio)
@@ -299,13 +307,13 @@ void SemaphoreUp(semaphore_t* s)
 
 	// Wake up first thread
 	schedulerInfo* sched = ThrSchedInfo();
-	SpinlockAcquire(&sched->lock);
+	SCHED_LOCK(sched);
 	threadInfo* t = threadQueue_pop(&s->waiting);
 	t->flags &= ~THRFLAG_BLOCKED;
 	threadQueue_add(&sched->ready[t->prio][sched->which], t);
 	sched->readyCount[sched->which] ++;
 	bool bNeedYield = t->prio > sched->curThread->prio;
-	SpinlockRelease(&sched->lock);
+	SCHED_UNLOCK(sched);
 	if (bNeedYield)
 	{
 		// Set reschedule flag so that SemaphoreUp() is callable inside IRQs
@@ -321,11 +329,11 @@ void SemaphoreDown(semaphore_t* s)
 
 	// Put thread to wait
 	schedulerInfo* sched = ThrSchedInfo();
-	SpinlockAcquire(&sched->lock);
+	SCHED_LOCK(sched);
 	threadInfo* curT = sched->curThread;
 	curT->flags |= THRFLAG_BLOCKED;
 	threadQueue_add(&s->waiting, curT);
-	SpinlockRelease(&sched->lock);
+	SCHED_UNLOCK(sched);
 	ThrYield();
 }
 

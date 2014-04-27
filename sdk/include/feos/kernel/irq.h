@@ -27,11 +27,6 @@ u32 irqFlags(int ctrlId);
 
 #define irqClear(ctrlId, mask) irqSet((ctrlId), (mask), nullptr)
 
-static inline bool isIrqMode()
-{
-	return CPSR_MODE(CpuGetCPSR()) == CPSR_MODE_IRQ;
-}
-
 static inline bool irqSuspend(void)
 {
 	bool ret = !(CpuGetCPSR() & BIT(7));
