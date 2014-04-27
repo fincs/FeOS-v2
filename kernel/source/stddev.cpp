@@ -48,6 +48,7 @@ void DevInit()
 	}
 
 	LINK_MODULE(ConsoleDrv);
+	LINK_MODULE(InitRdDrv);
 
 	IoInit();
 }
