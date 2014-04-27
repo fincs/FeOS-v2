@@ -83,6 +83,9 @@ threadInfo* ThrCreateK(ThrEntrypoint ep, void* userParam, int prio, size_t stack
 
 void ThrYield(void)
 {
+	if (isIrqMode())
+		return;
+
 	schedulerInfo* sched = ThrSchedInfo();
 	SpinlockAcquire(&sched->lock);
 
@@ -185,6 +188,17 @@ void ThrTimerISR(u32* regs)
 			return; // still have enough quantum
 	}
 
+	// Set reschedule flag
+	sched->needReschedule = true;
+}
+
+void ThrReschedule(u32* regs)
+{
+	schedulerInfo* sched = ThrSchedInfo();
+	if (!sched->needReschedule)
+		return; // No need to reschedule
+
+	threadInfo* curT = sched->curThread;
 	threadInfo* nextT = ThrScheduler(sched, true);
 	if (!nextT)
 		return; // no thread to switch to
@@ -241,6 +255,8 @@ threadInfo* ThrScheduler(schedulerInfo* sched, bool isPreempt)
 	threadInfo* t;
 	int i;
 
+	sched->needReschedule = false;
+
 	if (!isPreempt) // otherwise already done
 		ThrWakeUpIRQ(sched);
 
@@ -291,7 +307,11 @@ void SemaphoreUp(semaphore_t* s)
 	bool bNeedYield = t->prio > sched->curThread->prio;
 	SpinlockRelease(&sched->lock);
 	if (bNeedYield)
+	{
+		// Set reschedule flag so that SemaphoreUp() is callable inside IRQs
+		sched->needReschedule = true;
 		ThrYield();
+	}
 }
 
 void SemaphoreDown(semaphore_t* s)

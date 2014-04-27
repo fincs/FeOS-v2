@@ -99,6 +99,7 @@ struct tag_schedulerInfo
 	threadQueue irqQueue;
 	int readyCount[2];
 	bool which;
+	bool needReschedule;
 	vu32 tickCount;
 };
 
@@ -116,3 +117,6 @@ void ThrCtxCopy(cpuContext* outCtx, const cpuContext* inCtx, bool restore);
 // for yield
 bool ThrCtxSetJmp(cpuContext* ctx);
 void __attribute__((noreturn)) ThrCtxLongJmp(const cpuContext* outCtx);
+
+// Used for preempt
+void ThrReschedule(u32* regs);

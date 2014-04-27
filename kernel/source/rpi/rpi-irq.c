@@ -52,5 +52,6 @@ void KeIrqEntry(u32* regs)
 		if (mask)
 			irqDispatch(1, REG_IRQFlags[2], regs);
 	}
+	ThrReschedule(regs);
 	CpuSyncBarrier();
 }
