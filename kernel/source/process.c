@@ -55,5 +55,15 @@ processInfo* PsInit(void)
 
 void PsCtxSwitch(processInfo* p)
 {
-	// TODO: implement
+	// Caller is responsible for disabling IRQs before calling this function
+#ifndef HAS_PIPT_CACHE
+	// This is necessary because the cache deals somehow with virtual addresses
+	// (its indexing and/or tagging) and we are changing the virtual address map!
+	DC_FlushAll();
+	IC_InvalidateAll();
+#endif
+	CpuSetLowerPT(MemTranslateAddr((void*)p->vmTable));
+	CpuSyncBarrier(); // ARM docs say this is needed
+	CpuSetASID(p->asid);
+	CpuFlushBtac();
 }
