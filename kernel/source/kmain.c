@@ -114,11 +114,11 @@ static void thrtest()
 	//SemaphoreUp(&mySem);
 }
 
-int kmain(u32 memSize)
+int kmain(u32 memSize, u32 initRdAddr, u32 initRdSize)
 {
 	KioInit();
 	kputs("<kmain> started\n");
-	MemInit(memSize);
+	MemInit(memSize, initRdAddr, initRdSize);
 	irqInit();
 	timerInit();
 	ThrInit();

@@ -3,28 +3,50 @@
 .arm
 
 #define BIT(n) (1 << (n))
+#define ATAG_MEM 0x54410002
+#define ATAG_INITRD2 0x54420005
 
 .global __entrypoint
 __entrypoint:
 
 #ifndef FEOS_3ds
-	@ Get mem size from atags
-	ldr r3, =0x54410002 @ ATAG_MEM
-.Latab_loop:
+	@ Get boot parameters from ATAGs
+	mov r8, #0
+	mov r9, #0
+	mov r10, #0
+	ldr r3, =ATAG_MEM
+	ldr r4, =ATAG_INITRD2
+.Latag_loop:
 	ldr r0, [r2, #4]
 	cmp r0, #0
-.Latab_fail:
-	beq .Latab_fail
+	beq .Latag_endLoop
+
+	@ ATAG_MEM?
 	cmp r0, r3
-	beq .Latab_found
+	ldreq r8, [r2, #8]
+	beq .Latag_loopTail
+
+	@ ATAG_INITRD2?
+	cmp r0, r4
+	bne .Latag_loopTail
+	ldr r9, [r2, #8]
+	ldr r10, [r2, #12]
+
+.Latag_loopTail:
 	ldr r0, [r2, #0]
 	add r2, r0, lsl #2
-	b .Latab_loop
-.Latab_found:
-	ldr r8, [r2, #8]
+	b .Latag_loop
+
+.Latag_endLoop:
+	@ Ensure that we at least retrieved the RAM size
+	cmp r8, #0
+	beq .Latag_endLoop
+
 #else
-	@ Hardcoded mem size
-	ldr r8, =512*1024 + 128*1024*1024 @ 512KB AXI WRAM + 128MB FCRAM
+	@ Hardcoded boot parameters
+	ldr r8, =512*1024 + 128*1024*1024 @ RAM size: 512KB AXI WRAM + 128MB FCRAM
+	mov r9, #0  @ No RAM disk
+	mov r10, #0 @ No RAM disk
 #endif
 
     @@-----
@@ -102,6 +124,8 @@ __entrypoint:
 
 	@ Jump to main kernel code
 	mov r0, r8
+	mov r1, r9
+	mov r2, r10
 	ldr lr, =0xFFFF0000
 	ldr r4, =kmain
 	bx r4

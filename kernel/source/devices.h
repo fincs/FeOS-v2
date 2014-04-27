@@ -5,6 +5,9 @@
 extern "C" {
 #endif
 
+extern void* g_initRd;
+extern u32 g_initRdSize;
+
 // For use by DevInitPlatform
 #define LINK_MODULE(_name) do \
 	{ \

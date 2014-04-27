@@ -144,4 +144,4 @@ static inline void* page2vphys(pageinfo_t* p)
 extern vu32* g_curPageTable;
 
 // (Internal) Initializes the virtual memory address map system.
-void MemInit(u32 memSize);
+void MemInit(u32 memSize, u32 initRdAddr, u32 initRdSize);

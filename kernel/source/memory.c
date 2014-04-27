@@ -22,7 +22,7 @@ static inline int _ToggleBit(int order, pageinfo_t* page)
 	return (orderinfo[order].bitmap[entb>>3] ^= mask) & mask;
 }
 
-void MemInit(u32 memSize)
+void MemInit(u32 memSize, u32 initRdAddr, u32 initRdSize)
 {
 	extern u32 __temp_freeMB, __temp_physStart;
 	extern int __temp_sectIdx;
@@ -32,6 +32,7 @@ void MemInit(u32 memSize)
 	g_physBase = __temp_physStart;
 
 	kprintf("<MemInit> totalMem: %u bytes - usableMem: %u MB - physBase: %p\n", g_totalMem, g_usableMem, g_physBase);
+	kprintf("<MemInit> initrd @ %p (%u bytes)\n", initRdAddr, initRdSize);
 
 	// Initialize buddy bitmaps
 	u8* pos = PHYSICAL_MEMORY + sizeof(pageinfo_t)*(g_usableMem<<8);
@@ -74,6 +75,13 @@ void MemInit(u32 memSize)
 	CpuFlushTlb();
 	CpuFlushBtac();
 	CpuEnableCaches();
+
+	// Fill the initRd globals
+	if (initRdSize)
+	{
+		g_initRd = phys2virt(initRdAddr);
+		g_initRdSize = initRdSize;
+	}
 
 	kputs("<MemInit> Everything OK!\n");
 }
@@ -367,9 +375,11 @@ bool MemUnmapPage(void* vaddr)
 	pageinfo_t* pPage = vphys2page(phys2virt(*entry & ~0xFFF));
 	if (!AtomicDecrement(&pPage->refCount))
 	{
+#ifndef HAS_PIPT_CACHE
 		// Flush page from the caches
 		DC_FlushRange(vaddr, 0x1000);
 		IC_InvalidateRange(vaddr, 0x1000);
+#endif
 		// Delete page
 		MemFreePage(pPage, PAGEORDER_4K);
 	}
