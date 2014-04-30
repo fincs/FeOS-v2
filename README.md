@@ -1,5 +1,5 @@
 # FeOS v2.0-prerelease
-[![Build Status](https://travis-ci.org/fincs/FeOS-v2)](https://travis-ci.org/fincs/FeOS-v2)
+[![Build Status](https://travis-ci.org/fincs/FeOS-v2.svg)](https://travis-ci.org/fincs/FeOS-v2)
 
 ## Introduction
 

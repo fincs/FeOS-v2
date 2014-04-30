@@ -16,8 +16,10 @@ install:
   - wget http://download.sourceforge.net/devkitpro/devkitARM/$DKA_TARBALL -O /tmp/$DKA_TARBALL
   - sudo mkdir -p $DEVKITPRO
   - sudo chmod 777 $DEVKITPRO
+  - BUILD_DIR=$PWD
   - cd /opt/devkitPro
   - tar -xvjf /tmp/$DKA_TARBALL
+  - cd $BUILD_DIR
 script:
   - export FEOSSDK=$PWD/sdk
   - cd kernel
