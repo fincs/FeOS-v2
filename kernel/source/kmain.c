@@ -125,7 +125,7 @@ int kmain(u32 memSize, u32 initRdAddr, u32 initRdSize)
 	DevInit();
 
 	printf(
-		"FeOS/High Kernel v0.0-" FEOS_PLAT "-prerelease\n"
+		"FeOS Kernel v2.0-" FEOS_PLAT "-prerelease\n"
 		"  by FeOS Team, 2013-2014\n"
 		"\n");
 
