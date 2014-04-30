@@ -52,6 +52,8 @@ endif
 ARCH := -mthumb-interwork -mcpu=$(CPU) -mtune=$(CPU) -mfpu=vfp -mfloat-abi=hard
 
 DEFINES	 := -DFEOS -DFEOS_KERNEL -DFEOS_$(FEOSPLAT) -DFEOS_PLAT=\"$(FEOSPLAT)\" -DFEOS_PLATINCLUDE=\"$(FEOSPLAT)/platform.h\"
+# Horrid hack to get rid of format warnings
+DEFINES	 += -U __INT32_TYPE__ -D__INT32_TYPE__=int -U __UINT32_TYPE__ -D__UINT32_TYPE__="unsigned int"
 ifeq ($(DEBUGVER),)
 COPTFLAG :=	-O2
 DEFINES  += -DNDEBUG
