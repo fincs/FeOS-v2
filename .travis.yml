@@ -1,5 +1,10 @@
 language: cpp
 compiler: gcc
+notifications:
+  irc:
+    channels:
+      - "irc.blitzed.org#FeOS"
+    skip_join: true
 env:
   global:
     - DKA_TARBALL=devkitARM_r42-x86_64-linux.tar.bz2
