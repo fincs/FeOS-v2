@@ -325,7 +325,7 @@ void* MemMapPage(void* vaddr, int flags)
 bool MemProtectPage(void* vaddr, int flags)
 {
 	vaddr = _CleanMapAddr(vaddr);
-	vu32* entry = _GetCoarseTable(vaddr, true, nullptr);
+	vu32* entry = _GetCoarseTable(vaddr, false, nullptr);
 	if (!entry)
 		return false; // bail out
 
@@ -356,7 +356,7 @@ bool MemUnmapPage(void* vaddr)
 	kprintf("<MemUnmapPage> %p to be freed\n", vaddr);
 #endif
 	vu32* entry2 = nullptr;
-	vu32* entry = _GetCoarseTable(vaddr, true, &entry2);
+	vu32* entry = _GetCoarseTable(vaddr, false, &entry2);
 	if (!entry)
 		return false; // bail out
 
