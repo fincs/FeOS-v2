@@ -1,0 +1,24 @@
+language: cpp
+compiler: gcc
+env:
+  global:
+    - DKA_TARBALL=devkitARM_r42-x86_64-linux.tar.bz2
+    - DEVKITPRO=/opt/devkitPro
+    - DEVKITARM=/opt/devkitPro/devkitARM
+  matrix:
+    - FEOSPLAT=rpi
+before_install:
+  - sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
+  - sudo apt-get -qq update
+  - sudo apt-get -qq install g++-4.8
+  - sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-4.8 90
+install:
+  - wget http://download.sourceforge.net/devkitpro/devkitARM/$DKA_TARBALL -O /tmp/$DKA_TARBALL
+  - sudo mkdir -p $DEVKITPRO
+  - sudo chmod 777 $DEVKITPRO
+  - cd /opt/devkitPro
+  - tar -xvjf /tmp/$DKA_TARBALL
+script:
+  - export FEOSSDK=$PWD/sdk
+  - cd kernel
+  - make
