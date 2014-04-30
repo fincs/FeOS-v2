@@ -3,8 +3,8 @@ compiler: gcc
 env:
   global:
     - DKA_TARBALL=devkitARM_r42-x86_64-linux.tar.bz2
-    - DEVKITPRO=/opt/devkitPro
-    - DEVKITARM=/opt/devkitPro/devkitARM
+    - DEVKITPRO=/opt/devkitpro
+    - DEVKITARM=$DEVKITPRO/devkitARM
   matrix:
     - FEOSPLAT=rpi
 before_install:
@@ -16,10 +16,9 @@ install:
   - wget http://download.sourceforge.net/devkitpro/devkitARM/$DKA_TARBALL -O /tmp/$DKA_TARBALL
   - sudo mkdir -p $DEVKITPRO
   - sudo chmod 777 $DEVKITPRO
-  - BUILD_DIR=$PWD
-  - cd /opt/devkitPro
+  - pushd $DEVKITPRO
   - tar -xvjf /tmp/$DKA_TARBALL
-  - cd $BUILD_DIR
+  - popd
 script:
   - export FEOSSDK=$PWD/sdk
   - cd kernel
