@@ -103,17 +103,28 @@ struct tag_pageinfo
 	u32 flags;
 };
 
+#define PAGEFLAG_STICKY    BIT(31) // Disable freeing
+#define PAGEFLAG_HASCOLOUR BIT(30) // Page has a colouring restriction
+#define PAGEFLAG_COLOURMASK 3
+
+static inline u32 MemPageIncrRef(pageinfo_t* page)
+{
+	return AtomicIncrement(&page->refCount);
+}
+
+static inline u32 MemPageDecrRef(pageinfo_t* page)
+{
+	return AtomicDecrement(&page->refCount);
+}
+
 typedef struct
 {
-	u32 pageCount;
-	semaphore_t mutex;
-} coarseinfo_t;
-
-static inline void _InitCoarseInfo(coarseinfo_t* info)
-{
-	info->pageCount = 0;
-	SemaphoreInit(&info->mutex, 1);
-}
+	vu32* table; // L2 table
+	semaphore_t* mutex; // VM mutex
+	
+	vu32* l1Entries; // Paired L1 entries for this L2 table page
+	pageinfo_t* page; // Page that holds the L2 table
+} l2info_t;
 
 static inline void* safe_phys2virt(u32 x)
 {
