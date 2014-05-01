@@ -117,15 +117,6 @@ static inline u32 MemPageDecrRef(pageinfo_t* page)
 	return AtomicDecrement(&page->refCount);
 }
 
-typedef struct
-{
-	vu32* table; // L2 table
-	semaphore_t* mutex; // VM mutex
-	
-	vu32* l1Entries; // Paired L1 entries for this L2 table page
-	pageinfo_t* page; // Page that holds the L2 table
-} l2info_t;
-
 static inline void* safe_phys2virt(u32 x)
 {
 	if (x >= g_physBase)
@@ -134,11 +125,6 @@ static inline void* safe_phys2virt(u32 x)
 	x -= (u32)__pagetables;
 	return (u8*)MASTER_PAGETABLE + x;
 }
-
-enum
-{
-	PAGEFLAG_CLRMASK = 3,
-};
 
 #define PAGEMAP ((pageinfo_t*)0x80000000)
 
@@ -151,8 +137,6 @@ static inline void* page2vphys(pageinfo_t* p)
 {
 	return PHYSICAL_MEMORY + ((p - PAGEMAP)<<12);
 }
-
-extern vu32* g_curPageTable;
 
 // (Internal) Initializes the virtual memory address map system.
 void MemInit(u32 memSize, u32 initRdAddr, u32 initRdSize);

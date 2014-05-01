@@ -18,6 +18,7 @@ extern "C" {
 #include "process.h"
 #include "thread.h"
 #include "memory.h"
+#include "vmm.h"
 #include "data.h"
 
 #ifdef __cplusplus

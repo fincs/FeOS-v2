@@ -8,6 +8,7 @@
 #include "process.h"
 #include "thread.h"
 #include "memory.h"
+#include "vmm.h"
 
 #ifdef __cplusplus
 #include <dmodel.h>
