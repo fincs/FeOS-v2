@@ -13,7 +13,7 @@ static inline bool _IsKernel(void* addr)
 	return (u32)addr >= 0x80000000;
 }
 
-static inline vu32* _GetVMTable(void* addr, semaphore_t** ppSem)
+static inline vu32* _GetVMTable(void* addr, semaphore_t** ppSem, processInfo* ps)
 {
 	if (_IsKernel(addr))
 	{
@@ -22,123 +22,119 @@ static inline vu32* _GetVMTable(void* addr, semaphore_t** ppSem)
 		return MASTER_PAGETABLE;
 	} else
 	{
-		processInfo* ps = ThrSchedInfo()->curProcess;
+		if (!ps)
+			ps = ThrSchedInfo()->curProcess;
 		if (ppSem)
 			*ppSem = &ps->vmMutex;
 		return ps->vmTable;
 	}
 }
 
-static bool _GetL2PageTable(l2info_t* cInfo, void* vaddr, bool bCreate)
+bool VmmOpen(vmminfo_t* vmInfo, processInfo* proc, void* addr)
 {
-	int i;
-	if (!vaddr)
-		return false; // The NULL pointer region is unmappable
-
-	int idx = L1_INDEX(vaddr);
-
-	if (_IsKernel(vaddr) && (idx == L1_INDEX(0xfff00000) || idx == L1_INDEX(0xe0000000)))
-		return false; // Can't touch that memory region! (Kernel code and system vectors)
-
-	cInfo->mutex = nullptr;
-	vu32* vmTable = _GetVMTable(vaddr, &cInfo->mutex);
-	vu32* entry = vmTable + idx;
-	cInfo->l1Entries = vmTable + (idx &~ 1);
-
-#ifdef DEBUG
-	kprintf("<_GetL2PageTable> vaddr=%p bCreate=%d idx=%d idx2=%d\n", vaddr, bCreate, idx, idx&~1);
-#endif
-
-	// Take VM mutex
-	SemaphoreDown(cInfo->mutex);
-	switch (*entry & 3)
+	vmInfo->mutex = nullptr;
+	vmInfo->l2_table = nullptr;
+	vmInfo->curIndex = -1;
+	vmInfo->curPage = nullptr;
+	vmInfo->l1_table = _GetVMTable(addr, &vmInfo->mutex, proc);
+	if (vmInfo->l1_table)
 	{
-		case 0:
-		{
-			// This 1MB section has no associated L2 table
-			if (!bCreate)
-			{
-				SemaphoreUp(cInfo->mutex);
-				return false; // We are not allowed to create it
-			}
-
-			// Allocate a page for usage with the pair of L2 tables
-			cInfo->page = MemAllocPage(PAGEORDER_4K);
-			if (!cInfo->page)
-			{
-				SemaphoreUp(cInfo->mutex);
-				return false; // Out of memory
-			}
-
-			// Zerofill the L2 tables
-			vu32* l2Table = (vu32*)page2vphys(cInfo->page);
-			for (i = 0; i < 1024; i ++)
-				l2Table[i] = 0;
-
-			// Register the L2 tables
-			u32 l1Entries[2];
-			l1Entries[0] = MMU_L1_COARSE | (u32)virt2phys((void*)l2Table);
-			l1Entries[1] = l1Entries[0] + 2*1024;
-
-			if (idx != L1_INDEX(0xe0100000)) // Avoid touching the kernel executable L2 table
-				cInfo->l1Entries[0] = l1Entries[0];
-			else
-				cInfo->page->flags |= PAGEFLAG_STICKY;
-			if (idx != L1_INDEX(0xffe00000)) // Avoid touching the system vector L2 table
-				cInfo->l1Entries[1] = l1Entries[1];
-			else
-				cInfo->page->flags |= PAGEFLAG_STICKY;
-
-			// Retrieve the L2 table associated to the address the user specified
-			cInfo->table = l2Table + ((idx & 1) << 9);
-
-#ifdef DEBUG
-			kprintf("<_GetL2PageTable> created. ent1=%x ent2=%x page=%p table=%p retTable=%p\n",
-				cInfo->l1Entries[0], cInfo->l1Entries[1], cInfo->page,
-				l2Table, cInfo->table);
-#endif
-
-			// Keep the reference count of the page alive
-			return true;
-		}
-
-		case 1:
-		{
-			// Retrieve the L2 table associated to the address the user specified
-			cInfo->table = (vu32*)phys2virt(*entry &~ 0x3FF);
-
-			// Retrieve the page associated to the L2 table and increment its reference count
-			cInfo->page = vphys2page((void*)cInfo->table);
-			MemPageIncrRef(cInfo->page);
-
-#ifdef DEBUG
-			kprintf("<_GetL2PageTable> found. ent1=%x ent2=%x page=%p retTable=%p\n",
-				cInfo->l1Entries[0], cInfo->l1Entries[1], cInfo->page, cInfo->table);
-#endif
-			return true;
-		}
-
-		default:
-		{
-			// Invalid or unsupported situation
-			SemaphoreUp(cInfo->mutex);
-			return false;
-		}
+		SemaphoreDown(vmInfo->mutex);
+		return true;
 	}
+	return false;
 }
 
-static void _FreeL2PageTable(l2info_t* cInfo)
+static void _VmmCleanL2(vmminfo_t* vmInfo)
 {
-	if (!MemPageDecrRef(cInfo->page) && !(cInfo->page->flags & PAGEFLAG_STICKY))
+	if (vmInfo->curIndex < 0)
+		return;
+
+	if (!MemPageDecrRef(vmInfo->curPage) && !(vmInfo->curPage->flags & PAGEFLAG_STICKY))
 	{
 		// We need to free the L2 table's page
-		cInfo->l1Entries[0] = 0;
-		cInfo->l1Entries[1] = 0;
-		MemFreePage(cInfo->page, PAGEORDER_4K);
+		vu32* ent = vmInfo->l1_table + vmInfo->curIndex;
+		ent[0] = 0;
+		ent[1] = 0;
+		MemFreePage(vmInfo->curPage, PAGEORDER_4K);
 	}
 
-	// Release VM mutex
-	SemaphoreUp(cInfo->mutex);
+	vmInfo->curIndex = -1;
+}
+
+void VmmClose(vmminfo_t* vmInfo)
+{
+	_VmmCleanL2(vmInfo);
+	SemaphoreUp(vmInfo->mutex);
+}
+
+vu32* VmmGetEntry(vmminfo_t* vmInfo, void* addr, bool bCreate)
+{
+	int i, idx = L1_INDEX(addr), idx2 = idx &~ 1;
+
+	// Disallow forbidden memory regions (Zero page, Kernel code and System Vectors)
+	if (!idx || idx == L1_INDEX(0xe0000000) || idx == L1_INDEX(0xfff00000))
+		return nullptr;
+
+	// Check if we hadn't already had retrieved the region
+	if (idx2 != vmInfo->curIndex)
+	{
+		_VmmCleanL2(vmInfo);
+		u32 entry = vmInfo->l1_table[idx];
+		switch (entry & 3)
+		{
+			case 0:
+			{
+				// This 1MB section pair has no associated L2 table pair
+				if (!bCreate)
+					return nullptr; // We are not allowed to create it
+
+				// Allocate a page for usage with the pair of L2 tables
+				vmInfo->curPage = MemAllocPage(PAGEORDER_4K);
+				if (!vmInfo->curPage)
+					return nullptr; // Out of memory
+
+				// Zerofill the L2 tables
+				vmInfo->l2_table = (vu32*)page2vphys(vmInfo->curPage);
+				for (i = 0; i < 1024; i ++)
+					vmInfo->l2_table[i] = 0;
+
+				// Register the L2 tables
+				u32 ent[2];
+				ent[0] = MMU_L1_COARSE | (u32)virt2phys((void*)vmInfo->l2_table);
+				ent[1] = ent[0] + 2*1024;
+
+				if (idx != L1_INDEX(0xe0100000)) // Avoid touching the kernel executable L2 table
+					vmInfo->l1_table[idx2+0] = ent[0];
+				else
+					vmInfo->curPage->flags |= PAGEFLAG_STICKY;
+				if (idx != L1_INDEX(0xffe00000)) // Avoid touching the system vector L2 table
+					vmInfo->l1_table[idx2+1] = ent[1];
+				else
+					vmInfo->curPage->flags |= PAGEFLAG_STICKY;
+				break;
+			}
+
+			case 1:
+			{
+				// Retrieve the L2 table pair associated to this 1MB section pair
+				vmInfo->l2_table = (vu32*)phys2virt(entry &~ 0xFFF);
+
+				// Retrieve the page associated to the L2 table pair and increment its reference count
+				vmInfo->curPage = vphys2page((void*)vmInfo->l2_table);
+				MemPageIncrRef(vmInfo->curPage);
+				break;
+			}
+
+			default:
+				// Invalid or unsupported situation
+				return nullptr;
+		}
+	}
+
+	// Retrieve the pointer to the L2 entry
+	vmInfo->curIndex = idx;
+	return vmInfo->l2_table + ((idx & 1) << 9) + L2_INDEX(addr);
 }
 
 static inline u32 _GetPermissions(int flags, bool isK)
@@ -154,16 +150,22 @@ static inline u32 _GetPermissions(int flags, bool isK)
 void* MemMapPage(void* vaddr, int flags)
 {
 	vaddr = _CleanMapAddr(vaddr);
-	l2info_t cInfo;
-	if (!_GetL2PageTable(&cInfo, vaddr, true))
+	vmminfo_t vmInfo;
+	if (!VmmOpen(&vmInfo, nullptr, vaddr))
 		return nullptr; // bail out
 
-	vu32* entry = cInfo.table + L2_INDEX(vaddr);
+	vu32* entry = VmmGetEntry(&vmInfo, vaddr, true);
+	if (!entry)
+	{
+		VmmClose(&vmInfo);
+		return nullptr; // bail out
+	}
+
 	bool isK = _IsKernel(vaddr);
 
 	if (*entry & 3)
 	{
-		_FreeL2PageTable(&cInfo);
+		VmmClose(&vmInfo);
 		return nullptr; // Page already exists
 	}
 
@@ -171,17 +173,13 @@ void* MemMapPage(void* vaddr, int flags)
 	pageinfo_t* pPage = MemAllocPage(PAGEORDER_4K);
 	if (!pPage)
 	{
-		_FreeL2PageTable(&cInfo);
+		VmmClose(&vmInfo);
 		return nullptr; // Out of memory
 	}
 
 	// Initialize page structure
 	pPage->flags |= PAGEFLAG_HASCOLOUR | PAGE_COLOUR(vaddr);
-#ifdef DEBUG
-	kprintf("{DBG} cInfo: {%p,%p,[%x,%x]}\n", cInfo.table, cInfo.mutex, cInfo.l1Entries[0], cInfo.l1Entries[1]);
-	kprintf("{DBG} pPage: %p\n", pPage);
-#endif
-	MemPageIncrRef(cInfo.page);
+	VmmPageIncrRef(&vmInfo);
 
 	// Zerofill page memory
 	u32* pageMem = (u32*)page2vphys(pPage);
@@ -197,23 +195,29 @@ void* MemMapPage(void* vaddr, int flags)
 	// No need to do anything further:
 	// - TLB doesn't store entries that do not exist
 	// - Cache doesn't cache invalid addresses
-	_FreeL2PageTable(&cInfo);
+	VmmClose(&vmInfo);
 	return vaddr;
 }
 
 bool MemProtectPage(void* vaddr, int flags)
 {
 	vaddr = _CleanMapAddr(vaddr);
-	l2info_t cInfo;
-	if (!_GetL2PageTable(&cInfo, vaddr, false))
+	vmminfo_t vmInfo;
+	if (!VmmOpen(&vmInfo, nullptr, vaddr))
 		return nullptr; // bail out
 
-	vu32* entry = cInfo.table + L2_INDEX(vaddr);
+	vu32* entry = VmmGetEntry(&vmInfo, vaddr, false);
+	if (!entry)
+	{
+		VmmClose(&vmInfo);
+		return nullptr; // bail out
+	}
+
 	bool isK = _IsKernel(vaddr);
 
 	if (!(*entry & 2))
 	{
-		_FreeL2PageTable(&cInfo);
+		VmmClose(&vmInfo);
 		return false; // Missing or unsupported page
 	}
 
@@ -224,7 +228,7 @@ bool MemProtectPage(void* vaddr, int flags)
 	*entry = setting;
 	CpuFlushTlbByAddr(vaddr);
 
-	_FreeL2PageTable(&cInfo);
+	VmmClose(&vmInfo);
 	return true;
 }
 
@@ -234,15 +238,20 @@ bool MemUnmapPage(void* vaddr)
 #ifdef DEBUG
 	kprintf("<MemUnmapPage> %p to be freed\n", vaddr);
 #endif
-	l2info_t cInfo;
-	if (!_GetL2PageTable(&cInfo, vaddr, false))
+	vmminfo_t vmInfo;
+	if (!VmmOpen(&vmInfo, nullptr, vaddr))
 		return nullptr; // bail out
 
-	vu32* entry = cInfo.table + L2_INDEX(vaddr);
+	vu32* entry = VmmGetEntry(&vmInfo, vaddr, false);
+	if (!entry)
+	{
+		VmmClose(&vmInfo);
+		return nullptr; // bail out
+	}
 
 	if (!(*entry & 2))
 	{
-		_FreeL2PageTable(&cInfo);
+		VmmClose(&vmInfo);
 		return false; // Missing or unsupported page
 	}
 
@@ -265,18 +274,18 @@ bool MemUnmapPage(void* vaddr)
 	// Zap entry and clear TLB
 	*entry = 0;
 	entry[256] = 0;
-	MemPageDecrRef(cInfo.page);
+	VmmPageDecrRef(&vmInfo);
 	CpuFlushTlbByAddr(vaddr);
 
 	// Return - this will also take care of deleting the L2 table if necessary
-	_FreeL2PageTable(&cInfo);
+	VmmClose(&vmInfo);
 	return true;
 }
 
 u32 MemTranslateAddr(void* address)
 {
 	u32 vaddr = (u32)address;
-	u32 L1entry = _GetVMTable(address, nullptr)[L1_INDEX(vaddr)];
+	u32 L1entry = _GetVMTable(address, nullptr, nullptr)[L1_INDEX(vaddr)];
 	switch (L1entry & 3)
 	{
 		case MMU_L1_COARSE:
