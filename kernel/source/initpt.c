@@ -19,6 +19,7 @@ extern char __lma_data_size[];
 
 __attribute__((section(".initd")))
 u32 __temp_freeMB, __temp_physStart;
+__attribute__((section(".initd")))
 int __temp_sectIdx;
 
 __attribute__((section(".init2")))
