@@ -284,12 +284,8 @@ size_t MemVmUnmap(processInfo* proc, void* addr, size_t size)
 				// Flush page from the caches
 				DC_FlushRange(addr, 0x1000);
 				IC_InvalidateRange(addr, 0x1000);
-			} else
-			{
-				// I'm sorry, but this has to be done the hard way...
-				DC_FlushAll();
-				IC_InvalidateAll();
 			}
+			// Else there's nothing to do, as the caches are flushed on context switch
 #endif
 			// Delete page
 			if (!(pPage->flags & PAGEFLAG_STICKY))
