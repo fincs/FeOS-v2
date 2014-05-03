@@ -80,7 +80,8 @@ static inline u32 CpuGetCPSR()
 // Delay by Decrement Loop
 static inline void CpuLoopDelay(u32 count)
 {
-	asm volatile("1: subs %[count], %[count], #1; bne 1b" :: [count] "r" (count) : "cc");
+	u32 temp;
+	asm volatile("mov %[temp], %[count]\n\t1: subs %[temp], %[temp], #1; bne 1b" : [temp] "=r" (temp) : [count] "r" (count) : "cc");
 }
 
 // Atomic version of: if(!*ptr) return true; else { --*ptr; return false; }
