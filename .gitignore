@@ -1,6 +1,7 @@
 build/
 build.*/
 /sdk/bin/fartool
+/sdk/bin/fxetool
 *.7z
 *.exe
 *.img
