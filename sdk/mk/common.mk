@@ -2,19 +2,25 @@
 include $(FEOSMK)/vars.mk
 
 ifeq ($(FEOSPLAT),3ds)
-	CPUARCH := -mcpu=mpcore -mtune=mpcore
+	CPUTYPE := mpcore
 	FXEPLAT := 0x3D5
 else ifeq ($(FEOSPLAT),rpi)
-	CPUARCH := -mcpu=arm1176jzf-s -mtune=arm1176jzf-s
+	CPUTYPE := arm1176jzf-s
 	FXEPLAT := 0x314
 else ifeq ($(FEOSPLAT),qemu)
-	CPUARCH := -mcpu=arm1176jzf-s -mtune=arm1176jzf-s
+	CPUTYPE := arm1176jzf-s
 	FXEPLAT := 0x001
 else
 	FEOSPLAT :=
 	CPUARCH := -march=armv6
 	FXEPLAT := 0x000
 endif
+
+ifeq ($(CPUARCH),)
+	CPUARCH := -mcpu=$(CPUTYPE) -mtune=$(CPUTYPE)
+endif
+
+ifneq ($(CONF_TARGET),kernel)
 
 ifeq ($(CONF_TARGET),app)
 	MODULEBASE := 0x10000
@@ -35,12 +41,34 @@ endif
 ifeq ($(CONF_TARGET),kmod)
 	CONF_KMOD   := 1
 	CONF_TARGET := dynlib
+	CONF_EXPLIB := 1
 	CRTSUFFIX   := k
 	ENTRYPOINT  := __FXE_KModEntry
 endif
 
 ifeq ($(ENTRYPOINT),)
 	ENTRYPOINT := __FXE_Entry
+endif
+
+else
+	CONF_KMOD     := 1
+	ifeq ($(FEOSPLAT),)
+$(error "Please set FEOSPLAT in your environment. Valid values: 3ds rpi qemu")
+	endif
+
+	# Compiler & linker flags for compiling a FeOS kernel
+	CONF_CFLAGS   += -iquote $(TOPDIR)/source
+	CONF_CXXFLAGS += -fno-exceptions
+	CONF_NOSTDLIB := 1
+	CONF_LIBS     += -lgcc
+
+	# CPU configuration defines
+	CONF_DEFINES += -DFXEPLAT=$(FXEPLAT)
+	ifeq ($(CPUTYPE),mpcore)
+		CONF_DEFINES += -DHAS_PIPT_DCACHE
+	else ifeq ($(CPUTYPE),arm1176jzf-s)
+		CONF_DEFINES += -DHAS_FAST_CACHE_RANGE_OPS
+	endif
 endif
 
 #---------------------------------------------------------------------------------
@@ -63,10 +91,10 @@ DEFINES += -U __INT32_TYPE__ -D__INT32_TYPE__=int -U __UINT32_TYPE__ -D__UINT32_
 
 # Debugging defines
 ifneq ($(CONF_DEBUG),1)
-	COPTFLAG :=	-O2
+	COPTFLAG := -O3
 	DEFINES  += -DNDEBUG
 else
-	COPTFLAG := -O0
+	COPTFLAG := -Og
 	DEFINES  += -DDEBUG
 	CRTSUFFIX := $(CRTSUFFIX)d
 endif
@@ -92,7 +120,7 @@ ifeq ($(strip $(DEFARCH)),)
 	DEFARCH   := $(ARMARCH)
 endif
 
-CFLAGS := -g -Wall $(COPTFLAG) -funwind-tables -save-temps -nostdinc -fvisibility=hidden\
+CFLAGS := -g -Wall $(COPTFLAG) -funwind-tables -save-temps -fvisibility=hidden\
           -fomit-frame-pointer \
           -ffast-math \
 		  -fshort-wchar \
@@ -103,9 +131,16 @@ CXXFLAGS := $(CFLAGS) $(INCLUDECXX) -fno-rtti -nostdinc++ -std=gnu++11 -fvisibil
             -Wno-delete-non-virtual-dtor $(CONF_CXXFLAGS)
 
 ASFLAGS  := -g $(ARCH) $(DEFINES) $(INCLUDE)
+
+ifneq ($(CONF_TARGET),kernel)
 LDFLAGS  := -nostartfiles -nostdlib -T $(FEOSBIN)/fxe.ld $(ARCH) \
             -Wl,-d,-q,$(GCSECTIONS)--use-blx,-Map,$(TARGETNAME).map,--defsym=__modulebase=$(MODULEBASE),-e,$(ENTRYPOINT) \
             $(CONF_LDFLAGS)
+else
+LDFLAGS  := -nostartfiles -nostdlib -T $(TOPDIR)/ldscript/$(FEOSPLAT).spec -T $(TOPDIR)/ldscript/kernel.ld $(ARCH) \
+            -Wl,-Map,$(TARGETNAME).map \
+            $(CONF_LDFLAGS)
+endif
 
 ifeq ($(CONF_NOSTDLIB),)
 LIBS     := $(CXXLIB) -lfeoscrt$(CRTSUFFIX) -lgcc
@@ -131,8 +166,9 @@ ifneq ($(BUILD),$(notdir $(CURDIR)))
 
 export PATH := $(FEOSBIN):$(PATH)
 export TARGETNAME := $(TARGET)
+export TOPDIR := $(CURDIR)
 
-ifneq ($(strip $(CONF_TARGET)),staticlib)
+ifneq ($(CONF_TARGET),staticlib)
 	export OUTPUT := $(CURDIR)/$(TARGET)
 	export ELFFILE := $(CURDIR)/$(BUILD)/$(TARGET).elf
 	ifeq ($(CONF_EXPLIB),1)
@@ -193,7 +229,7 @@ all: $(BUILD)
 
 $(BUILD): $(CONF_PREREQUISITES)
 	@[ -d $@ ] || mkdir -p $@
-ifeq ($(strip $(CONF_TARGET)),staticlib)
+ifeq ($(CONF_TARGET),staticlib)
 	@mkdir -p lib
 endif
 	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/$(THIS_MAKEFILE)
@@ -201,10 +237,14 @@ endif
 #---------------------------------------------------------------------------------
 clean:
 	@echo Cleaning...
-ifneq ($(strip $(CONF_TARGET)),staticlib)
+ifneq ($(CONF_TARGET),kernel)
+ifneq ($(CONF_TARGET),staticlib)
 	@rm -fr $(BUILD) $(TARGET).fxe $(TARGET).dbg $(TARGET).exp lib/lib$(TARGET).a $(CONF_EXTRACLEAN)
 else
 	@rm -fr $(BUILD) lib/lib$(TARGET).a $(CONF_EXTRACLEAN)
+endif
+else
+	@rm -fr $(BUILD) $(TARGET).img $(TARGET).dbg $(CONF_EXTRACLEAN)
 endif
 
 #---------------------------------------------------------------------------------
@@ -216,13 +256,24 @@ DEPENDS := $(OFILES:.o=.d)
 # main target(s)
 #---------------------------------------------------------------------------------
 
-ifneq ($(strip $(CONF_TARGET)),staticlib)
+ifneq ($(CONF_TARGET),staticlib)
+
+ifneq ($(CONF_TARGET),kernel)
 
 #---------------------------------------------------------------------------------
 $(OUTPUT).fxe: $(ELFFILE)
 	@echo $(TARGETNAME) MODULE > $(EXPFILE)
 	@fxetool $< $@ $(FXEPLAT) >> $(EXPFILE)
 	@echo Built: $(notdir $@)
+
+else
+
+#---------------------------------------------------------------------------------
+$(OUTPUT).img: $(ELFFILE)
+	@$(OBJCOPY) -O binary $< $@
+	@echo Built: $(notdir $@)
+
+endif
 
 #---------------------------------------------------------------------------------
 $(ELFFILE): $(OFILES)

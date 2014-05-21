@@ -25,6 +25,6 @@ install:
   - tar -xvjf /tmp/$DKA_TARBALL
   - popd
 script:
-  - export FEOSSDK=$PWD/sdk
+  - export FEOS2SDK=$PWD/sdk
   - cd kernel
   - make
