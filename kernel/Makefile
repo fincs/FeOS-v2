@@ -14,10 +14,10 @@ FEOSMK = $(FEOS2SDK)/mk
 #---------------------------------------------------------------------------------
 ifeq ($(CONF_DEBUG),)
 TARGET   := FeOS.$(FEOSPLAT)
-BUILD    := build.$(FEOSPLAT)
+BUILD    := build/$(FEOSPLAT).Release
 else
 TARGET   := FeOSd.$(FEOSPLAT)
-BUILD    := build.$(FEOSPLAT).dbg
+BUILD    := build/$(FEOSPLAT).Debug
 endif
 SOURCES  := source source/$(FEOSPLAT) drivers drivers/$(FEOSPLAT) source/stdio
 INCLUDES :=

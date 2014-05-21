@@ -155,7 +155,7 @@ LIBDIRS += $(CONF_LIBDIRS)
 # no real need to edit anything past this point unless you need to add additional
 # rules for different file extensions
 #---------------------------------------------------------------------------------
-ifneq ($(BUILD),$(notdir $(CURDIR)))
+ifneq ($(__RECURSIVE__),1)
 #---------------------------------------------------------------------------------
 
 export PATH := $(FEOSBIN):$(PATH)
@@ -210,17 +210,16 @@ export LIBPATHS := $(foreach dir,$(LIBDIRS),-L$(dir)/lib) $(STDLIBDIR)
 
 THIS_MAKEFILE ?= Makefile
 
-.PHONY: $(BUILD) clean all
+.PHONY: all clean
 
 #---------------------------------------------------------------------------------
-all: $(BUILD)
 
-$(BUILD): $(CONF_PREREQUISITES)
-	@[ -d $@ ] || mkdir -p $@
+all: $(CONF_PREREQUISITES)
+	@[ -d $(BUILD) ] || mkdir -p $(BUILD)
 ifeq ($(CONF_TARGET),staticlib)
 	@mkdir -p lib
 endif
-	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/$(THIS_MAKEFILE)
+	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/$(THIS_MAKEFILE) __RECURSIVE__=1
 
 #---------------------------------------------------------------------------------
 clean:
@@ -289,37 +288,37 @@ endif
 #---------------------------------------------------------------------------------
 %.arm.o: %.arm.c
 	@echo $(notdir $<)
-	@$(CC) -MMD -MP -MF $(DEPSDIR)/$*.d $(ARMARCH) $(CFLAGS) -c $< -o $@
+	@$(CC) -MMD -MP -MF $(DEPSDIR)/$*.d $(ARMARCH) $(CFLAGS) -c $< -o $@ $(ERROR_FILTER)
 
 #---------------------------------------------------------------------------------
 %.arm.o: %.arm.cpp
 	@echo $(notdir $<)
-	@$(CXX) -MMD -MP -MF $(DEPSDIR)/$*.d $(ARMARCH) $(CXXFLAGS) -c $< -o $@
+	@$(CXX) -MMD -MP -MF $(DEPSDIR)/$*.d $(ARMARCH) $(CXXFLAGS) -c $< -o $@ $(ERROR_FILTER)
 
 #---------------------------------------------------------------------------------
 %.thumb.o: %.thumb.c
 	@echo $(notdir $<)
-	@$(CC) -MMD -MP -MF $(DEPSDIR)/$*.d $(THUMBARCH) $(CFLAGS) -c $< -o $@
+	@$(CC) -MMD -MP -MF $(DEPSDIR)/$*.d $(THUMBARCH) $(CFLAGS) -c $< -o $@ $(ERROR_FILTER)
 
 #---------------------------------------------------------------------------------
 %.thumb.o: %.thumb.cpp
 	@echo $(notdir $<)
-	@$(CXX) -MMD -MP -MF $(DEPSDIR)/$*.d $(THUMBARCH) $(CXXFLAGS) -c $< -o $@
+	@$(CXX) -MMD -MP -MF $(DEPSDIR)/$*.d $(THUMBARCH) $(CXXFLAGS) -c $< -o $@ $(ERROR_FILTER)
 
 #---------------------------------------------------------------------------------
 %.o: %.c
 	@echo $(notdir $<)
-	@$(CC) -MMD -MP -MF $(DEPSDIR)/$*.d $(DEFARCH) $(CFLAGS) -c $< -o $@
+	@$(CC) -MMD -MP -MF $(DEPSDIR)/$*.d $(DEFARCH) $(CFLAGS) -c $< -o $@ $(ERROR_FILTER)
 
 #---------------------------------------------------------------------------------
 %.o: %.cpp
 	@echo $(notdir $<)
-	@$(CXX) -MMD -MP -MF $(DEPSDIR)/$*.d $(DEFARCH) $(CXXFLAGS) -c $< -o $@
+	@$(CXX) -MMD -MP -MF $(DEPSDIR)/$*.d $(DEFARCH) $(CXXFLAGS) -c $< -o $@ $(ERROR_FILTER)
 
 #---------------------------------------------------------------------------------
 %.o: %.s
 	@echo $(notdir $<)
-	@$(CC) -MMD -MP -MF $(DEPSDIR)/$*.d -x assembler-with-cpp $(ASFLAGS) -c $< -o $@
+	@$(CC) -MMD -MP -MF $(DEPSDIR)/$*.d -x assembler-with-cpp $(ASFLAGS) -c $< -o $@ $(ERROR_FILTER)
 
 #---------------------------------------------------------------------------------
 # canned command sequence for binary data
