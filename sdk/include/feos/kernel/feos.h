@@ -5,7 +5,9 @@
 #include <string.h>
 #include "intrinsics.h"
 #include "../errorcodes.h"
+#ifdef FEOS_PLATINCLUDE
 #include FEOS_PLATINCLUDE
+#endif
 
 #ifdef __cplusplus
 extern "C" {

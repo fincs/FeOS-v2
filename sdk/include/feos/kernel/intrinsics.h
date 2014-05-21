@@ -47,7 +47,19 @@ static inline void IC_InvalidateRange(void* addr, u32 size)
 }
 
 #else
-#error "Not implemented"
+
+// Data Cache Flush Range
+static inline void DC_FlushRange(void* addr, u32 size)
+{
+	// Not implemented
+}
+
+// Instruction Cache Invalidate Range
+static inline void IC_InvalidateRange(void* addr, u32 size)
+{
+	// Not implemented
+}
+
 #endif
 
 // CPU Idle (Wait for Next IRQ)

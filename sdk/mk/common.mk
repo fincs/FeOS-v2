@@ -16,9 +16,7 @@ else
 	FXEPLAT := 0x000
 endif
 
-ifeq ($(CPUARCH),)
-	CPUARCH := -mcpu=$(CPUTYPE) -mtune=$(CPUTYPE)
-endif
+CPUARCH ?= -mcpu=$(CPUTYPE) -mtune=$(CPUTYPE)
 
 ifneq ($(CONF_TARGET),kernel)
 
@@ -46,9 +44,7 @@ ifeq ($(CONF_TARGET),kmod)
 	ENTRYPOINT  := __FXE_KModEntry
 endif
 
-ifeq ($(ENTRYPOINT),)
-	ENTRYPOINT := __FXE_Entry
-endif
+ENTRYPOINT ?= __FXE_Entry
 
 else
 	CONF_KMOD     := 1
@@ -81,6 +77,9 @@ ARCH := $(CPUARCH) -mfpu=vfp -mfloat-abi=hard
 DEFINES := -DFEOS
 ifeq ($(CONF_KMOD),1)
 	DEFINES += -DFEOS_KERNEL
+	ifneq ($(CONF_TARGET),kernel)
+		DEFINES += -DFEOS_KMODULE
+	endif
 endif
 ifneq ($(FEOSPLAT),)
 	DEFINES += -DFEOS_$(FEOSPLAT) -DFEOS_PLAT=\"$(FEOSPLAT)\" -DFEOS_PLATINCLUDE=\"$(FEOSPLAT)/platform.h\"
@@ -116,15 +115,10 @@ endif
 
 ARMARCH   := -marm
 THUMBARCH := -mthumb
-ifeq ($(strip $(DEFARCH)),)
-	DEFARCH   := $(ARMARCH)
-endif
+DEFARCH   ?= $(ARMARCH)
 
-CFLAGS := -g -Wall $(COPTFLAG) -funwind-tables -save-temps -fvisibility=hidden\
-          -fomit-frame-pointer \
-          -ffast-math \
-		  -fshort-wchar \
-          -mthumb-interwork \
+CFLAGS := -g -Wall $(COPTFLAG) -funwind-tables -save-temps -fvisibility=hidden \
+          -fomit-frame-pointer -ffast-math -fshort-wchar -mthumb-interwork \
           $(ARCH) $(DEFINES) $(INCLUDEC) $(CONF_CFLAGS)
 
 CXXFLAGS := $(CFLAGS) $(INCLUDECXX) -fno-rtti -nostdinc++ -std=gnu++11 -fvisibility-inlines-hidden \
@@ -190,10 +184,6 @@ CPPFILES := $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.cpp)))
 SFILES   := $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.s)))
 BINFILES := $(foreach dir,$(DATA),$(notdir $(wildcard $(dir)/*.*)))
 
-ifneq ($(CONF_FSDIR),)
-	export FSDIR := $(CURDIR)/$(CONF_FSDIR)
-endif
-
 #---------------------------------------------------------------------------------
 # use CXX for linking C++ projects, CC for standard C
 #---------------------------------------------------------------------------------
@@ -218,9 +208,7 @@ export INCLUDE  := $(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) \
 
 export LIBPATHS := $(foreach dir,$(LIBDIRS),-L$(dir)/lib) $(STDLIBDIR)
 
-ifeq ($(strip $(THIS_MAKEFILE)),)
-	THIS_MAKEFILE := Makefile
-endif
+THIS_MAKEFILE ?= Makefile
 
 .PHONY: $(BUILD) clean all
 
