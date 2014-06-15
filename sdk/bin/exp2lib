@@ -1,0 +1,70 @@
+#!/usr/bin/env perl
+use strict;
+use warnings;
+
+my $argc = $#ARGV + 1;
+
+if ($argc != 3)
+{
+	print "Usage:\n";
+	print "\texp2lib [expfile] [libfile] [tmpfolder]\n";
+	exit();
+}
+
+my $expfile = $ARGV[0];
+my $libfile = $ARGV[1];
+my $tmpfolder = $ARGV[2];
+
+my $curMod = "";
+my $compile = $libfile ne ":no:";
+my @sfiles = ();
+my @ofiles = ();
+my $as = $ENV{'AS'};
+my $ar = $ENV{'AR'};
+if ($compile && !$as){ die "The AS env var must be defined!" };
+if ($compile && !$ar){ die "The AR env var must be defined!" };
+
+open my $info, $expfile or die "Could not open $expfile: $!";
+while (my $line = <$info>)
+{
+	if ($line =~ /^([a-zA-Z0-9_]+)\s+module/i)
+	{
+		$curMod = $1;
+	} elsif ($line =~ /^([a-zA-Z0-9_]+)(\s+obj)?/i)
+	{
+		my $isObj = $2 ? 1 : 0;
+		my $sym = $1;
+		#print "$curMod.$1.$isObj\n";
+		my $outfname = "$tmpfolder/$sym.s";
+		push(@sfiles, $outfname);
+		open my $outf, '>', $outfname or die "Could not open file '$outfname' for write: $!";
+		print $outf ".section .imp.$curMod, \"ax\", %progbits\n";
+		print $outf ".global __imp_$sym\n.hidden __imp_$sym\n";
+		if ($isObj)
+		{
+			print $outf ".global $sym\n.hidden $sym\n$sym:\n";
+		} else
+		{
+			print $outf ".global $sym\n.hidden $sym\n.type $sym, %function\n$sym:\n\tldr pc, [pc, #-4]\n";
+		}
+		print $outf "__imp_$sym:\n\t.word 0\n";
+		close $outf;
+		if ($compile)
+		{
+			my $ofile = "$tmpfolder/$sym.imp.o";
+			push(@ofiles, $ofile);
+			my $rc = system("$as -x assembler-with-cpp -g0 -c $outfname -o $ofile") >> 8;
+			if ($rc != 0) { die "Failed to run $as!" };
+		}
+	}
+}
+close $info;
+
+if ($compile)
+{
+	my $olist = join(" ", @ofiles);
+	my $slist = join(" ", @sfiles);
+	my $rc = system("$ar -rc $libfile $olist") >> 8;
+	system("rm $olist $slist");
+	if ($rc != 0) { die "Failed to run $ar!" };
+}
