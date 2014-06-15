@@ -90,7 +90,7 @@ DEFINES += -U __INT32_TYPE__ -D__INT32_TYPE__=int -U __UINT32_TYPE__ -D__UINT32_
 
 # Debugging defines
 ifneq ($(CONF_DEBUG),1)
-	COPTFLAG := -O3
+	COPTFLAG := -O2
 	DEFINES  += -DNDEBUG
 else
 	COPTFLAG := -Og
@@ -119,7 +119,7 @@ DEFARCH   ?= $(ARMARCH)
 
 CFLAGS := -g -Wall $(COPTFLAG) -funwind-tables -save-temps -fvisibility=hidden \
           -fomit-frame-pointer -ffast-math -fshort-wchar -mthumb-interwork \
-          $(ARCH) $(DEFINES) $(INCLUDEC) $(CONF_CFLAGS)
+          $(ARCH) $(DEFINES) $(INCLUDEC) $(INCLUDE) $(CONF_CFLAGS)
 
 CXXFLAGS := $(CFLAGS) $(INCLUDECXX) -fno-rtti -nostdinc++ -std=gnu++11 -fvisibility-inlines-hidden \
             -Wno-delete-non-virtual-dtor $(CONF_CXXFLAGS)
@@ -167,6 +167,7 @@ ifneq ($(CONF_TARGET),staticlib)
 	export ELFFILE := $(CURDIR)/$(BUILD)/$(TARGET).elf
 	ifeq ($(CONF_EXPLIB),1)
 		export EXPFILE := $(OUTPUT).exp
+		export LIBFILE := $(CURDIR)/lib/lib$(TARGET).a
 	else
 		export EXPFILE := /dev/null
 	endif
@@ -182,6 +183,7 @@ export DEPSDIR := $(CURDIR)/$(BUILD)
 CFILES   := $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.c)))
 CPPFILES := $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.cpp)))
 SFILES   := $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.s)))
+DEFFILES := $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.def)))
 BINFILES := $(foreach dir,$(DATA),$(notdir $(wildcard $(dir)/*.*)))
 
 #---------------------------------------------------------------------------------
@@ -208,6 +210,8 @@ export INCLUDE  := $(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) \
 
 export LIBPATHS := $(foreach dir,$(LIBDIRS),-L$(dir)/lib) $(STDLIBDIR)
 
+export IMPFILES := $(DEFFILES:.def=.imp)
+
 THIS_MAKEFILE ?= Makefile
 
 .PHONY: all clean
@@ -215,8 +219,11 @@ THIS_MAKEFILE ?= Makefile
 #---------------------------------------------------------------------------------
 
 all: $(CONF_PREREQUISITES)
-	@[ -d $(BUILD) ] || mkdir -p $(BUILD)
+	@mkdir -p $(BUILD)/imps
 ifeq ($(CONF_TARGET),staticlib)
+	@mkdir -p lib
+endif
+ifeq ($(CONF_EXPLIB),1)
 	@mkdir -p lib
 endif
 	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/$(THIS_MAKEFILE) __RECURSIVE__=1
@@ -226,10 +233,11 @@ clean:
 	@echo Cleaning...
 ifneq ($(CONF_TARGET),kernel)
 ifneq ($(CONF_TARGET),staticlib)
-	@rm -fr $(BUILD) $(TARGET).fxe $(TARGET).dbg $(TARGET).exp lib/lib$(TARGET).a $(CONF_EXTRACLEAN)
+	@rm -fr $(BUILD) $(TARGET).fxe $(TARGET).dbg $(TARGET).exp $(LIBFILE) $(CONF_EXTRACLEAN)
 else
 	@rm -fr $(BUILD) lib/lib$(TARGET).a $(CONF_EXTRACLEAN)
 endif
+	@rmdir --ignore-fail-on-non-empty lib
 else
 	@rm -fr $(BUILD) $(TARGET).img $(TARGET).dbg $(CONF_EXTRACLEAN)
 endif
@@ -251,6 +259,9 @@ ifneq ($(CONF_TARGET),kernel)
 $(OUTPUT).fxe: $(ELFFILE)
 	@echo $(TARGETNAME) MODULE > $(EXPFILE)
 	@fxetool $< $@ $(FXEPLAT) >> $(EXPFILE)
+ifeq ($(CONF_EXPLIB),1)
+	@exp2lib $(EXPFILE) $(LIBFILE) .
+endif
 	@echo Built: $(notdir $@)
 
 else
@@ -266,7 +277,7 @@ endif
 $(ELFFILE): $(OFILES)
 	@echo
 	@echo Linking...
-	@$(LD) $(LDFLAGS) $(OFILES) $(LIBPATHS) $(LIBS) -o $@
+	@$(LD) $(LDFLAGS) $(OFILES) $(wildcard imps/*.imp.o) $(LIBPATHS) $(LIBS) -o $@
 	@$(OBJCOPY) --only-keep-debug $@ $(OUTPUT).dbg 2> /dev/null
 	@$(NM) -CSn $@ > $(TARGETNAME).lst
 	@$(STRIP) -g $@
@@ -280,10 +291,12 @@ $(OUTPUT).a: $(OFILES)
 	@echo
 	@echo Archiving...
 	@rm -f $@
-	@$(AR) -rc $@ $^
+	@$(AR) -rc $@ $^ $(wildcard imps/*.imp.o)
 	@echo Built: $(notdir $@)
 
 endif
+
+$(OFILES): $(IMPFILES)
 
 #---------------------------------------------------------------------------------
 %.arm.o: %.arm.c
@@ -319,6 +332,12 @@ endif
 %.o: %.s
 	@echo $(notdir $<)
 	@$(CC) -MMD -MP -MF $(DEPSDIR)/$*.d -x assembler-with-cpp $(ASFLAGS) -c $< -o $@ $(ERROR_FILTER)
+
+#---------------------------------------------------------------------------------
+%.imp: %.def
+	@echo $(notdir $<)
+	@exp2lib $< :no: imps
+	@touch $@
 
 #---------------------------------------------------------------------------------
 # canned command sequence for binary data

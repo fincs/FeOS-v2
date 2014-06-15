@@ -19,9 +19,9 @@ my $curMod = "";
 my $compile = $libfile ne ":no:";
 my @sfiles = ();
 my @ofiles = ();
-my $as = $ENV{'AS'};
+my $cc = $ENV{'CC'};
 my $ar = $ENV{'AR'};
-if ($compile && !$as){ die "The AS env var must be defined!" };
+if ($compile && !$cc){ die "The CC env var must be defined!" };
 if ($compile && !$ar){ die "The AR env var must be defined!" };
 
 open my $info, $expfile or die "Could not open $expfile: $!";
@@ -35,11 +35,11 @@ while (my $line = <$info>)
 		my $isObj = $2 ? 1 : 0;
 		my $sym = $1;
 		#print "$curMod.$1.$isObj\n";
-		my $outfname = "$tmpfolder/$sym.s";
+		my $outfname = "$tmpfolder/$sym.imp.s";
 		push(@sfiles, $outfname);
 		open my $outf, '>', $outfname or die "Could not open file '$outfname' for write: $!";
 		print $outf ".section .imp.$curMod, \"ax\", %progbits\n";
-		print $outf ".global __imp_$sym\n.hidden __imp_$sym\n";
+		print $outf ".global __imp_$sym\n.hidden __imp_$sym\n.align 2\n";
 		if ($isObj)
 		{
 			print $outf ".global $sym\n.hidden $sym\n$sym:\n";
@@ -49,13 +49,11 @@ while (my $line = <$info>)
 		}
 		print $outf "__imp_$sym:\n\t.word 0\n";
 		close $outf;
-		if ($compile)
-		{
-			my $ofile = "$tmpfolder/$sym.imp.o";
-			push(@ofiles, $ofile);
-			my $rc = system("$as -x assembler-with-cpp -g0 -c $outfname -o $ofile") >> 8;
-			if ($rc != 0) { die "Failed to run $as!" };
-		}
+
+		my $ofile = "$tmpfolder/$sym.imp.o";
+		push(@ofiles, $ofile);
+		my $rc = system("$cc -x assembler-with-cpp -g0 -c $outfname -o $ofile") >> 8;
+		if ($rc != 0) { die "Failed to run $cc!" };
 	}
 }
 close $info;

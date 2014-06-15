@@ -17,3 +17,7 @@ FEOSUSERLIB = $(FEOS2SDK)/userlib
 # devkitARM configuration
 #---------------------------------------------------------------------------------
 include $(DEVKITARM)/base_tools
+
+# Export these for exp2lib
+export $CC
+export $AR
