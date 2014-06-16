@@ -49,7 +49,7 @@ __entrypoint:
 	mov r10, #0 @ No RAM disk
 #endif
 
-    @@-----
+	@@-----
 	@@ INITIALIZE CPU
 	@@-----
 

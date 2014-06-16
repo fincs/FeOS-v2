@@ -212,21 +212,21 @@ export LIBPATHS := $(foreach dir,$(LIBDIRS),-L$(dir)/lib) $(STDLIBDIR)
 
 export IMPFILES := $(DEFFILES:.def=.imp)
 
-THIS_MAKEFILE ?= Makefile
+THIS_MAKEFILE := $(abspath $(firstword $(MAKEFILE_LIST)))
 
 .PHONY: all clean
 
 #---------------------------------------------------------------------------------
 
 all: $(CONF_PREREQUISITES)
-	@mkdir -p $(BUILD)/imps
+	@mkdir -p $(BUILD)
 ifeq ($(CONF_TARGET),staticlib)
 	@mkdir -p lib
 endif
 ifeq ($(CONF_EXPLIB),1)
 	@mkdir -p lib
 endif
-	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/$(THIS_MAKEFILE) __RECURSIVE__=1
+	@$(MAKE) --no-print-directory -C $(BUILD) -f $(THIS_MAKEFILE) __RECURSIVE__=1
 
 #---------------------------------------------------------------------------------
 clean:
@@ -336,6 +336,7 @@ $(OFILES): $(IMPFILES)
 #---------------------------------------------------------------------------------
 %.imp: %.def
 	@echo $(notdir $<)
+	@mkdir -p imps
 	@exp2lib $< :no: imps
 	@touch $@
 

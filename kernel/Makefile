@@ -1,6 +1,6 @@
 
 ifeq ($(strip $(FEOS2SDK)),)
-$(error "Please set FEOS2SDK in your environment. export FEOSSDK=<path to>FeOS/sdk")
+$(error "Please set FEOS2SDK in your environment. export FEOS2SDK=<path to>FeOS/sdk")
 endif
 
 FEOSMK = $(FEOS2SDK)/mk
