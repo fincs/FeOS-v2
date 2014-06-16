@@ -2,7 +2,7 @@
 
 .SUFFIXES:
 
-TARGET  := fartool
+TARGET  := fxetool
 BUILD   := build
 SOURCES := source
 
@@ -11,7 +11,7 @@ export CXX   := g++
 export STRIP := strip
 
 CFLAGS   := -g0 -Wall -O2
-CXXFLAGS := $(CFLAGS) -fno-rtti -fno-exceptions
+CXXFLAGS := $(CFLAGS) -fno-rtti -fno-exceptions -std=gnu++0x
 
 LDFLAGS := -g0
 
@@ -30,7 +30,7 @@ endif
 
 ifneq ($(BUILD),$(notdir $(CURDIR)))
 
-export OUTPUT := $(CURDIR)/../$(TARGET)$(EXEEXT)
+export OUTPUT := $(CURDIR)/../../../bin/$(TARGET)$(EXEEXT)
 export DEPSDIR := $(CURDIR)/$(BUILD)
 export VPATH := $(foreach dir,$(SOURCES),$(CURDIR)/$(dir))
 

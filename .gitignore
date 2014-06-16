@@ -1,6 +1,8 @@
 build/
-/sdk/bin/fartool
-/sdk/bin/fxetool
+/sdk/bin/*
+!/sdk/bin/exp2lib
+!/sdk/bin/feosbin2s
+!/sdk/bin/fxe.ld
 *.7z
 *.exe
 *.img
