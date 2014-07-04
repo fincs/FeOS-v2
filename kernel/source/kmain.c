@@ -69,7 +69,7 @@ static void vspacetest()
 
 static void contest()
 {
-	printf("FeOS/RPi Console Demo\n");
+	printf("FeOS-v2 Console Demo\n");
 	printf("Hello World!\n");
 	printf("Te\tst\tting tabs\n\n");
 	printf("\tHello World #FeOS\n");
