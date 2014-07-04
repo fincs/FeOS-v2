@@ -54,19 +54,19 @@ bool ConsoleDrv::Init()
 	m_fb = KFramebuffer::From(DevGet("fb"));
 	if (!m_fb)
 	{
-		kputs("<ConsoleDrv> Cannot open framebuffer!");
+		kputs("<ConsoleDrv> Cannot open framebuffer!\n");
 		return false;
 	}
 	if (m_fb->GetInfo(m_fbInfo) < 0)
 	{
-		kputs("<ConsoleDrv> Cannot retrieve framebuffer properties!");
+		kputs("<ConsoleDrv> Cannot retrieve framebuffer properties!\n");
 		return false;
 	}
 
 	size_t dummy;
 	if (DevGetMem(m_fb, m_conFb, dummy) < 0)
 	{
-		kputs("<ConsoleDrv> Cannot obtain framebuffer memory!");
+		kputs("<ConsoleDrv> Cannot obtain framebuffer memory!\n");
 		return false;
 	}
 
