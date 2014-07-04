@@ -34,8 +34,12 @@ FILE* fopendev(const char* devName, int id)
 
 void IoInit()
 {
+	// Open standard streams
 	stdStrm[1] = fopendev("con", -1);
 }
+
+// Remove NULL pointer check optimization (fixes an UB code generation issue)
+#pragma GCC optimize("no-tree-vrp", "no-delete-null-pointer-checks")
 
 int fflush(FILE* f)
 {

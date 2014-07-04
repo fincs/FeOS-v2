@@ -49,6 +49,9 @@ static int _fputd(int x, FILE* f)
 	return ret2 < 0 ? EOF : (ret+ret2);
 }
 
+// Remove NULL pointer check optimization (fixes an UB code generation issue)
+#pragma GCC optimize("no-tree-vrp", "no-delete-null-pointer-checks")
+
 int vfprintf(FILE* f, const char* fmt, va_list va)
 {
 	if (!f)

@@ -40,7 +40,7 @@ void DevInit()
 {
 	DevInitPlatform();
 
-	KIODriver* kio = new KIODriver;
+	auto kio = new KIODriver;
 	if (kio)
 	{
 		DevRegister(kio);
