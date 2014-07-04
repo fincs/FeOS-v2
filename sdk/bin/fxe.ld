@@ -54,24 +54,24 @@ SECTIONS
 
 	.ctor_table ALIGN(4) :
 	{
-		__feos_init_array =  . ;
+		__feos_init_array = . ;
 		KEEP( *(SORT(.preinit_array.*)) )
 		KEEP( *(.preinit_array) )
 		KEEP( *(SORT(.init_array.*)) )
 		KEEP( *(.init_array) )
 		KEEP( *(SORT(.ctors.*)) )
 		KEEP( *(.ctors) )
-		__feos_init_size = (. - __feos_init_array) / 4 ;
+		__feos_init_array_end = . ;
 	} : rodata
 
 	.dtor_table ALIGN(4) :
 	{
-		__feos_fini_array =  . ;
+		__feos_fini_array = . ;
 		KEEP( *(SORT(.dtors.*)) )
 		KEEP( *(.dtors) )
 		KEEP( *(SORT(.fini_array.*)) )
 		KEEP( *(.fini_array) )
-		__feos_fini_size = (. - __feos_fini_array) / 4 ;
+		__feos_fini_array_end = . ;
 	} : rodata
 
 	/* =========== SHARED section =========== */
