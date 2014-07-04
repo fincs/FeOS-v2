@@ -50,6 +50,7 @@ void KeIrqEntry(u32* regs)
 	u32 mask;
 	while ((mask = PIC_IRQStatus))
 		irqDispatch(0, mask, regs);
+	ThrReschedule(regs);
 }
 
 void isr_SIC(u32* regs)

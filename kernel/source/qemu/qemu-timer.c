@@ -72,6 +72,12 @@ void timerStop(int timer)
 	tmrHandles[AtomicDecrement(&tmrHandlePos)] = timer;
 }
 
+void timerWaitForIRQ(int timer)
+{
+	// TODO: actually tell apart sibling timers
+	ThrWaitForIRQ(0, BIT(4 + (timer>>1)));
+}
+
 void tmrIsr0(u32* regs)
 {
 	if (REG_TMRINT(0) & 1)
