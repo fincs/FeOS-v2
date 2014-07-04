@@ -52,3 +52,9 @@ typedef void (* fp_t)(void);
 #define _STATIC static
 #endif
 #endif
+
+#define FEOS_EXPORT __attribute__((__visibility__("default"))) //!< Exported symbol attribute.
+#define FEOS_WEAK __attribute__((weak)) //!< Weak symbol attribute.
+#define FEOS_DEPRECATED __attribute__((deprecated)) //!< Deprecated symbol attribute.
+#define FEOS_INIT __attribute__((constructor)) //!< Initialization function attribute. Makes a function be automatically called when a module is loaded.
+#define FEOS_FINI __attribute__((destructor)) //!< Deinitialization function attribute. Makes a function be automatically called when a module is unloaded.
