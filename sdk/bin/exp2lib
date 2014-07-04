@@ -21,42 +21,43 @@ my @sfiles = ();
 my @ofiles = ();
 my $cc = $ENV{'CC'};
 my $ar = $ENV{'AR'};
-if ($compile && !$cc){ die "The CC env var must be defined!" };
-if ($compile && !$ar){ die "The AR env var must be defined!" };
+$compile && !$cc and die "The CC env var must be defined!";
+$compile && !$ar and die "The AR env var must be defined!";
 
-open my $info, $expfile or die "Could not open $expfile: $!";
-while (my $line = <$info>)
+open INFO, $expfile or die "Could not open $expfile: $!";
+while (<INFO>)
 {
-	if ($line =~ /^([a-zA-Z0-9_]+)\s+module/i)
+	if (/^\s*([a-zA-Z0-9_]+)\s+module/i)
 	{
 		$curMod = $1;
-	} elsif ($line =~ /^([a-zA-Z0-9_]+)(\s+obj)?/i)
+	} elsif (/^\s*([a-zA-Z0-9_]+)(\s+obj)?/i)
 	{
 		my $isObj = $2 ? 1 : 0;
 		my $sym = $1;
-		#print "$curMod.$1.$isObj\n";
 		my $outfname = "$tmpfolder/$sym.imp.s";
 		push(@sfiles, $outfname);
-		open my $outf, '>', $outfname or die "Could not open file '$outfname' for write: $!";
-		print $outf ".section .imp.$curMod, \"ax\", %progbits\n";
-		print $outf ".global __imp_$sym\n.hidden __imp_$sym\n.align 2\n";
+		open OUTF, '>', $outfname or die "Could not open file '$outfname' for write: $!";
+		print OUTF ".section .imp.$curMod, \"ax\", %progbits\n";
+		print OUTF ".global __imp_$sym\n.hidden __imp_$sym\n.align 2\n";
 		if ($isObj)
 		{
-			print $outf ".global $sym\n.hidden $sym\n$sym:\n";
+			print OUTF ".global $sym\n.hidden $sym\n$sym:\n";
 		} else
 		{
-			print $outf ".global $sym\n.hidden $sym\n.type $sym, %function\n$sym:\n\tldr pc, [pc, #-4]\n";
+			print OUTF ".global $sym\n.hidden $sym\n.type $sym, %function\n$sym:\n\tldr pc, [pc, #-4]\n";
 		}
-		print $outf "__imp_$sym:\n\t.word 0\n";
-		close $outf;
+		print OUTF "__imp_$sym:\n\t.word 0\n";
+		close OUTF;
 
 		my $ofile = "$tmpfolder/$sym.imp.o";
 		push(@ofiles, $ofile);
-		my $rc = system("$cc -x assembler-with-cpp -g0 -c $outfname -o $ofile") >> 8;
-		if ($rc != 0) { die "Failed to run $cc!" };
+		system("$cc -x assembler-with-cpp -g0 -c $outfname -o $ofile") >> 8 and die "Failed to run $cc!";
+	} elsif (/^\s*;/)
+	{
+		next;
 	}
 }
-close $info;
+close INFO;
 
 if ($compile)
 {
@@ -64,5 +65,5 @@ if ($compile)
 	my $slist = join(" ", @sfiles);
 	my $rc = system("$ar -rc $libfile $olist") >> 8;
 	system("rm $olist $slist");
-	if ($rc != 0) { die "Failed to run $ar!" };
+	$rc != 0 and die "Failed to run $ar!";
 }
