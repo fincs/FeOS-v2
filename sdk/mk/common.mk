@@ -32,22 +32,21 @@ ifeq ($(CONF_TARGET),dynlib)
 endif
 
 ifeq ($(CONF_TARGET),kstaticlib)
-	CONF_KMOD   := 1
+	CONF_KMODE  := 1
 	CONF_TARGET := staticlib
 endif
 
 ifeq ($(CONF_TARGET),kmod)
-	CONF_KMOD   := 1
+	CONF_KMODE  := 1
 	CONF_TARGET := dynlib
 	CONF_EXPLIB := 1
-	CRTSUFFIX   := k
 	ENTRYPOINT  := __FXE_KModEntry
 endif
 
 ENTRYPOINT ?= __FXE_Entry
 
 else
-	CONF_KMOD     := 1
+	CONF_KMODE    := 1
 	ifeq ($(FEOSPLAT),)
 $(error "Please set FEOSPLAT in your environment. Valid values: 3ds rpi qemu")
 	endif
@@ -75,7 +74,7 @@ ARCH := $(CPUARCH) -mfpu=vfp -mfloat-abi=hard
 
 # FeOS base defines
 DEFINES := -DFEOS
-ifeq ($(CONF_KMOD),1)
+ifeq ($(CONF_KMODE),1)
 	DEFINES += -DFEOS_KERNEL
 	ifneq ($(CONF_TARGET),kernel)
 		DEFINES += -DFEOS_KMODULE
@@ -95,13 +94,13 @@ ifneq ($(CONF_DEBUG),1)
 else
 	COPTFLAG := -Og
 	DEFINES  += -DDEBUG
-	CRTSUFFIX := $(CRTSUFFIX)d
+	CRTSUFFIX := d
 endif
 
 # User defines
 DEFINES += $(CONF_DEFINES)
 
-ifneq ($(CONF_KMOD),1)
+ifneq ($(CONF_KMODE),1)
 INCLUDEC   := -I$(FEOS2SDK)/include
 INCLUDECXX := -I$(FEOS2SDK)/include/cxx
 else
@@ -136,10 +135,17 @@ LDFLAGS  := -nostartfiles -nostdlib -T $(TOPDIR)/ldscript/$(FEOSPLAT).spec -T $(
             $(CONF_LDFLAGS)
 endif
 
-ifeq ($(CONF_NOSTDLIB),)
-LIBS     := $(CXXLIB) -lfeoscrt$(CRTSUFFIX) -lgcc
+ifneq ($(CONF_NOSTDLIB),1)
+	ifneq ($(CONF_KMODE),1)
+		ifneq ($(CONF_NOCRT),1)
+			CRTFLAG := -lfeoscrt$(CRTSUFFIX)
+		endif
+		LIBS := $(CXXLIB) -lfeoscrt0$(CRTSUFFIX) $(CRTFLAG) -lgcc
+	else
+		LIBS := $(CXXLIB) -lfeosk$(CRTSUFFIX) -lgcc
+	endif
 endif
-LIBS     := $(CONF_LIBS) $(LIBS)
+LIBS := $(CONF_LIBS) $(LIBS)
 
 #---------------------------------------------------------------------------------
 # list of directories containing libraries, this must be the top level containing
@@ -158,21 +164,26 @@ LIBDIRS += $(CONF_LIBDIRS)
 ifneq ($(__RECURSIVE__),1)
 #---------------------------------------------------------------------------------
 
+CONF_OUTDIR ?= .
+CONF_OUTDIR := $(abspath $(CONF_OUTDIR))
+
 export PATH := $(FEOSBIN):$(PATH)
 export TARGETNAME := $(TARGET)
 export TOPDIR := $(CURDIR)
 
 ifneq ($(CONF_TARGET),staticlib)
-	export OUTPUT := $(CURDIR)/$(TARGET)
+	export OUTPUT := $(CONF_OUTDIR)/$(TARGET)
 	export ELFFILE := $(CURDIR)/$(BUILD)/$(TARGET).elf
 	ifeq ($(CONF_EXPLIB),1)
 		export EXPFILE := $(OUTPUT).exp
-		export LIBFILE := $(CURDIR)/lib/lib$(TARGET).a
+		export LIBFILE := $(CONF_OUTDIR)/lib/lib$(TARGET).a
+		MAKELIB := 1
 	else
 		export EXPFILE := /dev/null
 	endif
 else
-	export OUTPUT := $(CURDIR)/lib/lib$(TARGET)
+	export OUTPUT := $(CONF_OUTDIR)/lib/lib$(TARGET)
+	MAKELIB := 1
 endif
 
 export VPATH := $(foreach dir,$(SOURCES),$(CURDIR)/$(dir)) \
@@ -194,7 +205,7 @@ ifeq ($(strip $(CPPFILES)),)
 	export LD := $(CC)
 else
 	export LD := $(CXX)
-	ifneq ($(CONF_KMOD),1)
+	ifneq ($(CONF_KMODE),1)
 	ifneq ($(CONF_NOCXXLIB),1)
 		export CXXLIB := -lfeoscxx
 	endif
@@ -219,12 +230,9 @@ THIS_MAKEFILE := $(abspath $(firstword $(MAKEFILE_LIST)))
 #---------------------------------------------------------------------------------
 
 all: $(CONF_PREREQUISITES)
-	@mkdir -p $(BUILD)
-ifeq ($(CONF_TARGET),staticlib)
-	@mkdir -p lib
-endif
-ifeq ($(CONF_EXPLIB),1)
-	@mkdir -p lib
+	@mkdir -p $(BUILD) $(CONF_OUTDIR)
+ifeq ($(MAKELIB),1)
+	@mkdir -p $(CONF_OUTDIR)/lib
 endif
 	@$(MAKE) --no-print-directory -C $(BUILD) -f $(THIS_MAKEFILE) __RECURSIVE__=1
 
@@ -233,13 +241,13 @@ clean:
 	@echo Cleaning...
 ifneq ($(CONF_TARGET),kernel)
 ifneq ($(CONF_TARGET),staticlib)
-	@rm -fr $(BUILD) $(TARGET).fxe $(TARGET).dbg $(TARGET).exp $(LIBFILE) $(CONF_EXTRACLEAN)
+	@rm -fr $(BUILD) $(OUTPUT).fxe $(OUTPUT).dbg $(OUTPUT).exp $(LIBFILE) $(CONF_EXTRACLEAN)
 else
-	@rm -fr $(BUILD) lib/lib$(TARGET).a $(CONF_EXTRACLEAN)
+	@rm -fr $(BUILD) $(OUTPUT).a $(CONF_EXTRACLEAN)
 endif
-	@rmdir --ignore-fail-on-non-empty lib
+	@rmdir $(CONF_OUTDIR)/lib $(CONF_OUTDIR) 2>/dev/null || true
 else
-	@rm -fr $(BUILD) $(TARGET).img $(TARGET).dbg $(CONF_EXTRACLEAN)
+	@rm -fr $(BUILD) $(OUTPUT).img $(OUTPUT).dbg $(CONF_EXTRACLEAN)
 endif
 
 #---------------------------------------------------------------------------------
